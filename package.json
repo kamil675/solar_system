@@ -1,0 +1,15 @@
+{
+  "name": "3d-solar-system-main",
+  "version": "1.0.0",
+  "description": "A stunning **3D Solar System Simulator** built using [Three.js](https://threejs.org/), where planets orbit realistically, stars glow, and you can interact with celestial bodies to learn exciting space facts!",
+  "main": "OrbitControls.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.180.0"
+  }
+}
