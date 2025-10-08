@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Solar System - Updated</title>
+    <title>3D Solar System - Smooth Stars Entrance (Updated Rings)</title>
     <style>
       body {
         margin: 0;
@@ -48,6 +48,7 @@
       <div id="loading-text">Loading 0%</div>
     </div>
 
+    <!-- ===== Libraries ===== -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -61,22 +62,19 @@
       const loaderSunRadius = 20;
       const miniPlanets = [];
       const miniPlanetCount = 6;
-
       for (let i = 0; i < miniPlanetCount; i++) {
         miniPlanets.push({
           radius: Math.random() * 60 + 30,
           size: Math.random() * 4 + 2,
           speed: Math.random() * 0.03 + 0.01,
           angle: Math.random() * Math.PI * 2,
-          color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+          color: `hsl(${Math.random() * 360},80%,60%)`,
         });
       }
-
       function drawLoader() {
         ctx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
         ctx.save();
         ctx.translate(loaderCanvas.width / 2, loaderCanvas.height / 2);
-
         const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, loaderSunRadius);
         grad.addColorStop(0, "#ffff33");
         grad.addColorStop(1, "rgba(255,255,0,0)");
@@ -84,48 +82,40 @@
         ctx.arc(0, 0, loaderSunRadius, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
-
         miniPlanets.forEach((p) => {
           p.angle += p.speed;
           const x = Math.cos(p.angle) * p.radius;
           const y = Math.sin(p.angle) * p.radius;
           const planetGrad = ctx.createRadialGradient(x, y, 0, x, y, p.size);
-          planetGrad.addColorStop(0, p.color);
+          planetGrad.addColorStop(0, "white");
+          planetGrad.addColorStop(0.3, p.color);
           planetGrad.addColorStop(1, "rgba(0,0,0,0)");
           ctx.beginPath();
-          ctx.arc(x, y, p.size, 0, Math.PI * 2);
+          ctx.arc(x, y, p.size + 2, 0, Math.PI * 2);
           ctx.fillStyle = planetGrad;
           ctx.fill();
         });
-
         ctx.restore();
         requestAnimationFrame(drawLoader);
       }
       drawLoader();
 
-      // ===== 3D Solar System =====
+      // ===== 3D Scene =====
       const scene = new THREE.Scene();
-      const loaderTexture = new THREE.TextureLoader();
-      loaderTexture.load("textures/models/stars.webp", function (texture) {
-        texture.repeat.y = 0.9;
-        texture.offset.y = 0.1;
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        scene.background = texture;
-      });
-
       const camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
         0.1,
         5000
       );
-      camera.position.set(0, 50, 200);
-
+      camera.position.set(0, 50, 250);
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.outputEncoding = THREE.sRGBEncoding;
       document.body.appendChild(renderer.domElement);
 
+      // ===== Label Renderer =====
       const labelRenderer = new THREE.CSS2DRenderer();
       labelRenderer.setSize(window.innerWidth, window.innerHeight);
       labelRenderer.domElement.style.position = "absolute";
@@ -137,20 +127,70 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
 
-      scene.add(new THREE.PointLight(0xffffff, 3, 0));
-      scene.add(new THREE.AmbientLight(0x404040, 0.5));
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.3));
+      // ===== Lights =====
+      const sunLight = new THREE.PointLight(0xffee88, 3, 1000);
+      sunLight.position.set(0, 0, 0);
+      scene.add(sunLight);
+      const fillLight1 = new THREE.PointLight(0xffffff, 0.3, 2000);
+      fillLight1.position.set(500, 200, 500);
+      scene.add(fillLight1);
+      const fillLight2 = new THREE.PointLight(0xffffff, 0.25, 2000);
+      fillLight2.position.set(-400, -200, -300);
+      scene.add(fillLight2);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
+      // ===== Stars =====
+      const starGeometry = new THREE.BufferGeometry();
+      const starCount = 10000;
+      const starVertices = [];
+      const starSpeeds = [];
+      for (let i = 0; i < starCount; i++) {
+        starVertices.push(
+          (Math.random() - 0.5) * 4000,
+          (Math.random() - 0.5) * 4000,
+          -Math.random() * 5000 - 500
+        );
+        starSpeeds.push(Math.random() * 0.5 + 0.1);
+      }
+      starGeometry.setAttribute(
+        "position",
+        new THREE.Float32BufferAttribute(starVertices, 3)
+      );
+
+      const starMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 1.2,
+        transparent: true,
+        opacity: 0.8,
+      });
+
+      const stars = new THREE.Points(starGeometry, starMaterial);
+      scene.add(stars);
+
+      // ===== Animate stars =====
+      function animateStars(factor = 1) {
+        const positions = stars.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length; i += 3) {
+          positions[i + 2] += starSpeeds[i / 3] * factor;
+          if (positions[i + 2] > 1000) {
+            positions[i + 2] = -5000 - Math.random() * 1000;
+            positions[i] = (Math.random() - 0.5) * 4000;
+            positions[i + 1] = (Math.random() - 0.5) * 4000;
+          }
+        }
+        stars.geometry.attributes.position.needsUpdate = true;
+      }
+
+      // ===== Solar System =====
       const gltfLoader = new THREE.GLTFLoader();
       const solarSystem = new THREE.Group();
+      solarSystem.scale.set(0.01, 0.01, 0.01);
       scene.add(solarSystem);
-      solarSystem.scale.set(0, 0, 0);
 
-      // ===== Planets Data =====
       const planets = [
         {
           name: "Sun",
-          radius: 48,
+          radius: 46,
           distance: 0,
           speed: 0,
           rotation: 0.001,
@@ -161,7 +201,7 @@
           name: "Mercury",
           radius: 6,
           distance: 40,
-          speed: 0.008, // 🔹 Slowed down
+          speed: 0.008,
           rotation: 0.004,
           file: "mercury.glb",
           info: "Closest planet to Sun.",
@@ -170,7 +210,7 @@
           name: "Venus",
           radius: 9,
           distance: 60,
-          speed: 0.006, // 🔹 Slowed down
+          speed: 0.006,
           rotation: 0.002,
           file: "venus.glb",
           info: "Very hot planet.",
@@ -179,7 +219,7 @@
           name: "Earth",
           radius: 11,
           distance: 80,
-          speed: 0.004, // 🔹 Slowed down
+          speed: 0.004,
           rotation: 0.01,
           file: "earth.glb",
           info: "Our home planet.",
@@ -188,47 +228,47 @@
           name: "Mars",
           radius: 13,
           distance: 100,
-          speed: 0.003, // 🔹 Slowed down
+          speed: 0.003,
           rotation: 0.008,
           file: "mars.glb",
           info: "Red planet.",
         },
         {
           name: "Jupiter",
-          radius: 16,
+          radius: 17,
           distance: 130,
-          speed: 0.0015, // 🔹 Slowed down
+          speed: 0.0015,
           rotation: 0.005,
           file: "jupiter.glb",
           info: "Largest planet.",
         },
         {
           name: "Saturn",
-          radius: 17,
+          radius: 16,
           distance: 155,
-          speed: 0.0012, // 🔹 Slowed down
+          speed: 0.0012,
           rotation: 0.008,
           file: "saturn.glb",
           info: "Has rings.",
         },
         {
           name: "Uranus",
-          radius: 18,
-          distance: 170,
+          radius: 13,
+          distance: 180,
           speed: 0.0009,
           rotation: 0.003,
           file: "uranus.glb",
           info: "Rotates on side.",
         },
-        // {
-        //   name: "Neptune",
-        //   radius: 23,
-        //   distance: 200,
-        //   speed: 0.0007,
-        //   rotation: 0.004,
-        //   file: "neptune.glb",
-        //   info: "Farthest planet.",
-        // },
+        {
+          name: "Neptune",
+          radius: 10,
+          distance: 200,
+          speed: 0.0009,
+          rotation: 0.003,
+          file: "neptune.glb",
+          info: "Rotates on side.",
+        },
       ];
 
       const planetMeshes = [];
@@ -239,34 +279,36 @@
       planets.forEach((planet) => {
         gltfLoader.load(`textures/models/${planet.file}`, (gltf) => {
           const mesh = gltf.scene;
-          const bbox = new THREE.Box3().setFromObject(mesh);
-          const center = new THREE.Vector3();
-          bbox.getCenter(center);
-          mesh.position.sub(center);
-          const size = new THREE.Vector3();
-          bbox.getSize(size);
-          const maxDim = Math.max(size.x, size.y, size.z);
-          mesh.scale.setScalar(planet.radius / maxDim);
-
+          if (planet.name !== "Sun") {
+            const bbox = new THREE.Box3().setFromObject(mesh);
+            const center = new THREE.Vector3();
+            bbox.getCenter(center);
+            mesh.position.sub(center);
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            mesh.scale.setScalar(
+              planet.radius / Math.max(size.x, size.y, size.z)
+            );
+          }
           const pivot = new THREE.Object3D();
           pivot.userData.angle = Math.random() * Math.PI * 2;
           pivot.add(mesh);
           solarSystem.add(pivot);
-
           mesh.position.x = planet.distance;
-          mesh.position.z = 0;
 
+          // ===== Orbit Rings (Updated with Uranus) =====
           if (planet.distance > 0) {
             const orbit = new THREE.RingGeometry(
-              planet.distance - 0.05,
-              planet.distance + 0.05,
+              planet.distance - 0.08,
+              planet.distance + 0.08,
               128
             );
             const orbitMat = new THREE.MeshBasicMaterial({
-              color: 0x888888,
+              color: 0xffffff,
               side: THREE.DoubleSide,
               transparent: true,
-              opacity: 1,
+              opacity: 0.8,
+              blending: THREE.AdditiveBlending,
             });
             const orbitMesh = new THREE.Mesh(orbit, orbitMat);
             orbitMesh.rotation.x = Math.PI / 2;
@@ -277,12 +319,28 @@
           div.className = "planet-label";
           div.textContent = `${planet.name}: ${planet.info}`;
           const label = new THREE.CSS2DObject(div);
-          label.position.set(0, size.y / 2 + 2, 0);
+
+          // Default label position
+          let labelY = planet.radius + 5;
+          if (planet.name === "Earth") labelY = planet.radius - 11;
+          if (planet.name === "Mars") labelY = planet.radius - 12;
+          if (planet.name === "Uranus") labelY = planet.radius - 11;
+          if (planet.name === "Sun") labelY = planet.radius - 22;
+
+          label.position.set(0, labelY, 0);
           label.visible = false;
           mesh.add(label);
 
-          planetMeshes.push({ mesh, pivot, planet, label, bbox });
+          // Special Uranus position adjustment
+          mesh.position.x = planet.distance;
 
+          if (planet.name === "Uranus") {
+            pivot.rotation.x = 0; // keep orbit plane same as others
+            mesh.position.y = 0; // make sure Uranus sits on ring plane
+            mesh.position.z = 0; // align with orbit center
+          }
+
+          planetMeshes.push({ mesh, pivot, planet, label });
           planetsLoaded++;
           loadingText.textContent = `Loading ${Math.floor(
             (planetsLoaded / planets.length) * 100
@@ -294,33 +352,27 @@
               duration: 1,
               onComplete: () => {
                 loaderDiv.style.display = "none";
-                gsap
-                  .timeline()
-                  .to(solarSystem.scale, {
-                    x: 2,
-                    y: 2,
-                    z: 2,
-                    duration: 2,
-                    ease: "power2.out",
-                  })
-                  .to(solarSystem.rotation, {
-                    y: "-=" + Math.PI * 4,
-                    duration: 2,
-                    ease: "power1.inOut",
-                  })
-                  .to(solarSystem.scale, {
-                    x: 1,
-                    y: 1,
-                    z: 1,
-                    duration: 0.5,
-                    ease: "power2.out",
-                  });
+                gsap.to(solarSystem.scale, {
+                  x: 1,
+                  y: 1,
+                  z: 1,
+                  duration: 3,
+                  ease: "power2.out",
+                });
+                const starEntrance = { factor: 1 };
+                gsap.to(starEntrance, {
+                  factor: 10,
+                  duration: 3,
+                  ease: "power2.out",
+                  onUpdate: () => animateStars(starEntrance.factor),
+                });
               },
             });
           }
         });
       });
 
+      // ===== Raycaster for Hover Labels =====
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
       window.addEventListener("mousemove", (e) => {
@@ -328,8 +380,10 @@
         mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
       });
 
+      // ===== Animate Loop =====
       function animate() {
         requestAnimationFrame(animate);
+
         planetMeshes.forEach((p) => {
           if (p.planet.distance > 0) {
             p.pivot.userData.angle += p.planet.speed;
@@ -340,6 +394,8 @@
           p.mesh.rotation.y += p.planet.rotation;
           p.label.visible = false;
         });
+
+        animateStars();
 
         if (planetsLoaded === planets.length) {
           raycaster.setFromCamera(mouse, camera);
