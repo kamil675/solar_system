@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Solar System - Smooth Stars Entrance (Updated Rings)</title>
+    <title>3D Solar System - Optimized Load</title>
     <style>
       body {
         margin: 0;
@@ -61,11 +61,11 @@
       const ctx = loaderCanvas.getContext("2d");
       const loaderSunRadius = 20;
       const miniPlanets = [];
-      const miniPlanetCount = 6;
+      const miniPlanetCount = 3; // reduced for faster load
       for (let i = 0; i < miniPlanetCount; i++) {
         miniPlanets.push({
-          radius: Math.random() * 60 + 30,
-          size: Math.random() * 4 + 2,
+          radius: Math.random() * 40 + 20,
+          size: Math.random() * 3 + 2,
           speed: Math.random() * 0.03 + 0.01,
           angle: Math.random() * Math.PI * 2,
           color: `hsl(${Math.random() * 360},80%,60%)`,
@@ -109,6 +109,7 @@
         5000
       );
       camera.position.set(0, 50, 250);
+
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -131,17 +132,20 @@
       const sunLight = new THREE.PointLight(0xffee88, 3, 1000);
       sunLight.position.set(0, 0, 0);
       scene.add(sunLight);
+
       const fillLight1 = new THREE.PointLight(0xffffff, 0.3, 2000);
       fillLight1.position.set(500, 200, 500);
       scene.add(fillLight1);
+
       const fillLight2 = new THREE.PointLight(0xffffff, 0.25, 2000);
       fillLight2.position.set(-400, -200, -300);
       scene.add(fillLight2);
+
       scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
       // ===== Stars =====
       const starGeometry = new THREE.BufferGeometry();
-      const starCount = 2000;
+      const starCount = 1000; // reduced for faster load
       const starVertices = [];
       const starSpeeds = [];
       for (let i = 0; i < starCount; i++) {
@@ -160,7 +164,6 @@
       const starTexture = new THREE.TextureLoader().load(
         "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/circle.png"
       );
-
       const starMaterial = new THREE.PointsMaterial({
         color: 0xffffff,
         size: 1.2,
@@ -170,7 +173,6 @@
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-
       const stars = new THREE.Points(starGeometry, starMaterial);
       scene.add(stars);
 
@@ -286,7 +288,6 @@
       planets.forEach((planet) => {
         gltfLoader.load(`textures/models/${planet.file}`, (gltf) => {
           const mesh = gltf.scene;
-
           const bbox = new THREE.Box3().setFromObject(mesh);
           const center = new THREE.Vector3();
           bbox.getCenter(center);
@@ -297,7 +298,7 @@
           if (planet.name === "Sun") scaleFactor *= 0.8;
           mesh.scale.setScalar(scaleFactor);
 
-          // ===== Add hyper-realistic Sun glow (reduced intensity) =====
+          // ===== Sun Glow =====
           if (planet.name === "Sun") {
             const coreLight = new THREE.PointLight(0xffd966, 2, 2000);
             mesh.add(coreLight);
@@ -366,8 +367,8 @@
             });
             const orbitMesh = new THREE.Mesh(orbit, orbitMat);
             orbitMesh.rotation.x = Math.PI / 2;
-            orbitMesh.visible = false; // hide initially
-            solarSystem.add(orbitMesh); // add to solarSystem
+            orbitMesh.visible = false;
+            solarSystem.add(orbitMesh);
             orbitMeshes.push(orbitMesh);
           }
 
@@ -449,7 +450,6 @@
       // ===== Animate Loop =====
       function animate() {
         requestAnimationFrame(animate);
-
         planetMeshes.forEach((p) => {
           if (p.planet.distance > 0) {
             p.pivot.userData.angle += p.planet.speed;
