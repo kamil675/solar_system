@@ -299,19 +299,15 @@
 
           // ===== Add hyper-realistic Sun glow (reduced intensity) =====
           if (planet.name === "Sun") {
-            // 🌕 Core bright golden-yellow light (main sunlight)
-            const coreLight = new THREE.PointLight(0xffd966, 1.5, 900);
+            const coreLight = new THREE.PointLight(0xffd966, 2, 2000);
             mesh.add(coreLight);
 
-            // 🔴 Outer reddish heat haze
-            const redGlow = new THREE.PointLight(0xff3300, 0.15, 1200);
+            const redGlow = new THREE.PointLight(0xff3300, 0.2, 2500);
             mesh.add(redGlow);
 
-            // 🟡 Soft yellow rim light for brightness balance
-            const yellowGlow = new THREE.PointLight(0xffee88, 0.4, 700);
+            const yellowGlow = new THREE.PointLight(0xffee88, 0.5, 1500);
             mesh.add(yellowGlow);
 
-            // ✨ Surface emissive tint (golden-orange)
             mesh.traverse((child) => {
               if (child.isMesh && child.material) {
                 child.material.emissive = new THREE.Color(0xffb84d);
@@ -319,7 +315,6 @@
               }
             });
 
-            // 🌟 Add soft corona halo (outer sunlight haze)
             const textureLoader = new THREE.TextureLoader();
             const glowTexture = textureLoader.load(
               "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lensflare/lensflare0.png"
@@ -333,16 +328,15 @@
               depthWrite: false,
             });
             const glowSprite = new THREE.Sprite(glowMaterial);
-            glowSprite.scale.set(180, 180, 1);
+            glowSprite.scale.set(400, 400, 1); // bada corona
             mesh.add(glowSprite);
 
-            // 🔥 Flickering animation for natural sunlight effect (reduced amplitude)
             const flicker = { t: 0 };
             const updateFlicker = () => {
               flicker.t += 0.035;
-              coreLight.intensity = 1.5 + Math.sin(flicker.t * 1.2) * 0.1;
-              yellowGlow.intensity = 0.4 + Math.sin(flicker.t * 0.8) * 0.05;
-              redGlow.intensity = 0.15 + Math.sin(flicker.t * 0.6) * 0.03;
+              coreLight.intensity = 2 + Math.sin(flicker.t * 1.2) * 0.1;
+              yellowGlow.intensity = 0.5 + Math.sin(flicker.t * 0.8) * 0.05;
+              redGlow.intensity = 0.2 + Math.sin(flicker.t * 0.6) * 0.03;
               glowSprite.material.opacity =
                 0.25 + Math.sin(flicker.t * 0.4) * 0.02;
               requestAnimationFrame(updateFlicker);
