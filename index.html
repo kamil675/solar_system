@@ -157,7 +157,6 @@
         new THREE.Float32BufferAttribute(starVertices, 3)
       );
 
-      // 🔹 Add circular sprite texture for round stars
       const starTexture = new THREE.TextureLoader().load(
         "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/circle.png"
       );
@@ -165,17 +164,16 @@
       const starMaterial = new THREE.PointsMaterial({
         color: 0xffffff,
         size: 1.2,
-        map: starTexture, // <-- texture added for circular stars
+        map: starTexture,
         transparent: true,
         opacity: 0.8,
-        blending: THREE.AdditiveBlending, // optional: glow effect
+        blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
 
       const stars = new THREE.Points(starGeometry, starMaterial);
       scene.add(stars);
 
-      // ===== Animate stars =====
       function animateStars(factor = 1) {
         const positions = stars.geometry.attributes.position.array;
         for (let i = 0; i < positions.length; i += 3) {
@@ -280,6 +278,7 @@
       ];
 
       const planetMeshes = [];
+      const orbitMeshes = [];
       let planetsLoaded = 0;
       const loaderDiv = document.getElementById("loader");
       const loadingText = document.getElementById("loading-text");
@@ -288,40 +287,35 @@
         gltfLoader.load(`textures/models/${planet.file}`, (gltf) => {
           const mesh = gltf.scene;
 
-          // ===== Fixed Scaling Logic (Sun enlarged) =====
           const bbox = new THREE.Box3().setFromObject(mesh);
           const center = new THREE.Vector3();
           bbox.getCenter(center);
           mesh.position.sub(center);
           const size = new THREE.Vector3();
           bbox.getSize(size);
-
-          // ===== Scale planets (Sun included) =====
           let scaleFactor = planet.radius / Math.max(size.x, size.y, size.z);
-
-          // 🌞 Make Sun slightly larger without changing its original material
           if (planet.name === "Sun") scaleFactor *= 0.8;
           mesh.scale.setScalar(scaleFactor);
 
           // ===== Add hyper-realistic Sun glow (reduced intensity) =====
           if (planet.name === "Sun") {
             // 🌕 Core bright golden-yellow light (main sunlight)
-            const coreLight = new THREE.PointLight(0xffd966, 1.5, 900); // 🔹 intensity reduced
+            const coreLight = new THREE.PointLight(0xffd966, 1.5, 900);
             mesh.add(coreLight);
 
             // 🔴 Outer reddish heat haze
-            const redGlow = new THREE.PointLight(0xff3300, 0.15, 1200); // 🔹 intensity reduced
+            const redGlow = new THREE.PointLight(0xff3300, 0.15, 1200);
             mesh.add(redGlow);
 
             // 🟡 Soft yellow rim light for brightness balance
-            const yellowGlow = new THREE.PointLight(0xffee88, 0.4, 700); // 🔹 intensity reduced
+            const yellowGlow = new THREE.PointLight(0xffee88, 0.4, 700);
             mesh.add(yellowGlow);
 
             // ✨ Surface emissive tint (golden-orange)
             mesh.traverse((child) => {
               if (child.isMesh && child.material) {
-                child.material.emissive = new THREE.Color(0xffb84d); // golden-orange
-                child.material.emissiveIntensity = 0.2; // 🔹 reduced
+                child.material.emissive = new THREE.Color(0xffb84d);
+                child.material.emissiveIntensity = 0.2;
               }
             });
 
@@ -332,14 +326,14 @@
             );
             const glowMaterial = new THREE.SpriteMaterial({
               map: glowTexture,
-              color: 0xffe066, // warmer yellow-golden tone
+              color: 0xffe066,
               transparent: true,
-              opacity: 0.25, // 🔹 reduced opacity
+              opacity: 0.25,
               blending: THREE.AdditiveBlending,
               depthWrite: false,
             });
             const glowSprite = new THREE.Sprite(glowMaterial);
-            glowSprite.scale.set(180, 180, 1); // 🔹 slightly smaller halo
+            glowSprite.scale.set(180, 180, 1);
             mesh.add(glowSprite);
 
             // 🔥 Flickering animation for natural sunlight effect (reduced amplitude)
@@ -362,6 +356,7 @@
           solarSystem.add(pivot);
           mesh.position.x = planet.distance;
 
+          // ===== Orbit Rings =====
           if (planet.distance > 0) {
             const orbit = new THREE.RingGeometry(
               planet.distance - 0.08,
@@ -377,29 +372,24 @@
             });
             const orbitMesh = new THREE.Mesh(orbit, orbitMat);
             orbitMesh.rotation.x = Math.PI / 2;
-            scene.add(orbitMesh);
+            orbitMesh.visible = false; // hide initially
+            solarSystem.add(orbitMesh); // add to solarSystem
+            orbitMeshes.push(orbitMesh);
           }
 
+          // ===== Labels =====
           const div = document.createElement("div");
           div.className = "planet-label";
           div.textContent = `${planet.name}: ${planet.info}`;
           const label = new THREE.CSS2DObject(div);
-
           let labelY = planet.radius + 5;
           if (planet.name === "Earth") labelY = planet.radius - 11;
           if (planet.name === "Mars") labelY = planet.radius - 12;
           if (planet.name === "Uranus") labelY = planet.radius - 11;
           if (planet.name === "Sun") labelY = planet.radius - 22;
-
           label.position.set(0, labelY, 0);
           label.visible = false;
           mesh.add(label);
-
-          if (planet.name === "Uranus") {
-            pivot.rotation.x = 0;
-            mesh.position.y = 0;
-            mesh.position.z = 0;
-          }
 
           planetMeshes.push({ mesh, pivot, planet, label });
           planetsLoaded++;
@@ -413,17 +403,38 @@
               duration: 1,
               onComplete: () => {
                 loaderDiv.style.display = "none";
+
+                // Animate Solar System Scale Up
+                solarSystem.scale.set(0.01, 0.01, 0.01);
                 gsap.to(solarSystem.scale, {
                   x: 1,
                   y: 1,
                   z: 1,
-                  duration: 3,
+                  duration: 2,
                   ease: "power2.out",
+                  onUpdate: () => {
+                    orbitMeshes.forEach((ring) => (ring.visible = true));
+                  },
                 });
+
+                // Camera entrance
+                gsap.fromTo(
+                  camera.position,
+                  { z: 500, y: 100 },
+                  {
+                    z: 250,
+                    y: 50,
+                    duration: 3,
+                    ease: "power2.out",
+                    onUpdate: () => camera.lookAt(0, 0, 0),
+                  }
+                );
+
+                // Stars warp
                 const starEntrance = { factor: 1 };
                 gsap.to(starEntrance, {
                   factor: 10,
-                  duration: 3,
+                  duration: 2.5,
                   ease: "power2.out",
                   onUpdate: () => animateStars(starEntrance.factor),
                 });
