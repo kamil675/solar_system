@@ -141,27 +141,35 @@
 
       // ===== Stars =====
       const starGeometry = new THREE.BufferGeometry();
-      const starCount = 10000;
+      const starCount = 2000;
       const starVertices = [];
       const starSpeeds = [];
       for (let i = 0; i < starCount; i++) {
         starVertices.push(
-          (Math.random() - 0.5) * 4000,
-          (Math.random() - 0.5) * 4000,
-          -Math.random() * 5000 - 500
+          (Math.random() - 0.5) * 1000,
+          (Math.random() - 0.5) * 1000,
+          -Math.random() * 1000
         );
-        starSpeeds.push(Math.random() * 0.5 + 0.1);
+        starSpeeds.push(Math.random() * 0.2 + 0.1);
       }
       starGeometry.setAttribute(
         "position",
         new THREE.Float32BufferAttribute(starVertices, 3)
       );
 
+      // 🔹 Add circular sprite texture for round stars
+      const starTexture = new THREE.TextureLoader().load(
+        "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/circle.png"
+      );
+
       const starMaterial = new THREE.PointsMaterial({
         color: 0xffffff,
         size: 1.2,
+        map: starTexture, // <-- texture added for circular stars
         transparent: true,
         opacity: 0.8,
+        blending: THREE.AdditiveBlending, // optional: glow effect
+        depthWrite: false,
       });
 
       const stars = new THREE.Points(starGeometry, starMaterial);
@@ -279,24 +287,81 @@
       planets.forEach((planet) => {
         gltfLoader.load(`textures/models/${planet.file}`, (gltf) => {
           const mesh = gltf.scene;
-          if (planet.name !== "Sun") {
-            const bbox = new THREE.Box3().setFromObject(mesh);
-            const center = new THREE.Vector3();
-            bbox.getCenter(center);
-            mesh.position.sub(center);
-            const size = new THREE.Vector3();
-            bbox.getSize(size);
-            mesh.scale.setScalar(
-              planet.radius / Math.max(size.x, size.y, size.z)
+
+          // ===== Fixed Scaling Logic (Sun enlarged) =====
+          const bbox = new THREE.Box3().setFromObject(mesh);
+          const center = new THREE.Vector3();
+          bbox.getCenter(center);
+          mesh.position.sub(center);
+          const size = new THREE.Vector3();
+          bbox.getSize(size);
+
+          // ===== Scale planets (Sun included) =====
+          let scaleFactor = planet.radius / Math.max(size.x, size.y, size.z);
+
+          // 🌞 Make Sun slightly larger without changing its original material
+          if (planet.name === "Sun") scaleFactor *= 0.8;
+          mesh.scale.setScalar(scaleFactor);
+
+          // ===== Add hyper-realistic Sun glow (reduced intensity) =====
+          if (planet.name === "Sun") {
+            // 🌕 Core bright golden-yellow light (main sunlight)
+            const coreLight = new THREE.PointLight(0xffd966, 1.5, 900); // 🔹 intensity reduced
+            mesh.add(coreLight);
+
+            // 🔴 Outer reddish heat haze
+            const redGlow = new THREE.PointLight(0xff3300, 0.15, 1200); // 🔹 intensity reduced
+            mesh.add(redGlow);
+
+            // 🟡 Soft yellow rim light for brightness balance
+            const yellowGlow = new THREE.PointLight(0xffee88, 0.4, 700); // 🔹 intensity reduced
+            mesh.add(yellowGlow);
+
+            // ✨ Surface emissive tint (golden-orange)
+            mesh.traverse((child) => {
+              if (child.isMesh && child.material) {
+                child.material.emissive = new THREE.Color(0xffb84d); // golden-orange
+                child.material.emissiveIntensity = 0.2; // 🔹 reduced
+              }
+            });
+
+            // 🌟 Add soft corona halo (outer sunlight haze)
+            const textureLoader = new THREE.TextureLoader();
+            const glowTexture = textureLoader.load(
+              "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lensflare/lensflare0.png"
             );
+            const glowMaterial = new THREE.SpriteMaterial({
+              map: glowTexture,
+              color: 0xffe066, // warmer yellow-golden tone
+              transparent: true,
+              opacity: 0.25, // 🔹 reduced opacity
+              blending: THREE.AdditiveBlending,
+              depthWrite: false,
+            });
+            const glowSprite = new THREE.Sprite(glowMaterial);
+            glowSprite.scale.set(180, 180, 1); // 🔹 slightly smaller halo
+            mesh.add(glowSprite);
+
+            // 🔥 Flickering animation for natural sunlight effect (reduced amplitude)
+            const flicker = { t: 0 };
+            const updateFlicker = () => {
+              flicker.t += 0.035;
+              coreLight.intensity = 1.5 + Math.sin(flicker.t * 1.2) * 0.1;
+              yellowGlow.intensity = 0.4 + Math.sin(flicker.t * 0.8) * 0.05;
+              redGlow.intensity = 0.15 + Math.sin(flicker.t * 0.6) * 0.03;
+              glowSprite.material.opacity =
+                0.25 + Math.sin(flicker.t * 0.4) * 0.02;
+              requestAnimationFrame(updateFlicker);
+            };
+            updateFlicker();
           }
+
           const pivot = new THREE.Object3D();
           pivot.userData.angle = Math.random() * Math.PI * 2;
           pivot.add(mesh);
           solarSystem.add(pivot);
           mesh.position.x = planet.distance;
 
-          // ===== Orbit Rings (Updated with Uranus) =====
           if (planet.distance > 0) {
             const orbit = new THREE.RingGeometry(
               planet.distance - 0.08,
@@ -320,7 +385,6 @@
           div.textContent = `${planet.name}: ${planet.info}`;
           const label = new THREE.CSS2DObject(div);
 
-          // Default label position
           let labelY = planet.radius + 5;
           if (planet.name === "Earth") labelY = planet.radius - 11;
           if (planet.name === "Mars") labelY = planet.radius - 12;
@@ -331,13 +395,10 @@
           label.visible = false;
           mesh.add(label);
 
-          // Special Uranus position adjustment
-          mesh.position.x = planet.distance;
-
           if (planet.name === "Uranus") {
-            pivot.rotation.x = 0; // keep orbit plane same as others
-            mesh.position.y = 0; // make sure Uranus sits on ring plane
-            mesh.position.z = 0; // align with orbit center
+            pivot.rotation.x = 0;
+            mesh.position.y = 0;
+            mesh.position.z = 0;
           }
 
           planetMeshes.push({ mesh, pivot, planet, label });
