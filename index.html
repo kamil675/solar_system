@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Solar System - Smooth Stars Entrance (Updated Rings)</title>
+    <title>3D Solar System - Cinematic Entry (Final with planet glows)</title>
     <style>
       body {
         margin: 0;
@@ -37,6 +37,15 @@
         font-size: 18px;
         margin-top: 20px;
       }
+      .info-box {
+        background: white;
+        color: black;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 14px;
+        max-width: 200px;
+        text-align: left;
+      }
       canvas {
         display: block;
       }
@@ -61,11 +70,10 @@
       const ctx = loaderCanvas.getContext("2d");
       const loaderSunRadius = 20;
       const miniPlanets = [];
-      const miniPlanetCount = 6;
-      for (let i = 0; i < miniPlanetCount; i++) {
+      for (let i = 0; i < 5; i++) {
         miniPlanets.push({
-          radius: Math.random() * 60 + 30,
-          size: Math.random() * 4 + 2,
+          radius: Math.random() * 40 + 20,
+          size: Math.random() * 3 + 2,
           speed: Math.random() * 0.03 + 0.01,
           angle: Math.random() * Math.PI * 2,
           color: `hsl(${Math.random() * 360},80%,60%)`,
@@ -75,6 +83,7 @@
         ctx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
         ctx.save();
         ctx.translate(loaderCanvas.width / 2, loaderCanvas.height / 2);
+
         const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, loaderSunRadius);
         grad.addColorStop(0, "#ffff33");
         grad.addColorStop(1, "rgba(255,255,0,0)");
@@ -82,6 +91,7 @@
         ctx.arc(0, 0, loaderSunRadius, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
+
         miniPlanets.forEach((p) => {
           p.angle += p.speed;
           const x = Math.cos(p.angle) * p.radius;
@@ -100,7 +110,7 @@
       }
       drawLoader();
 
-      // ===== 3D Scene =====
+      // ===== Three.js Scene =====
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         75,
@@ -109,13 +119,13 @@
         5000
       );
       camera.position.set(0, 50, 250);
+
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.outputEncoding = THREE.sRGBEncoding;
       document.body.appendChild(renderer.domElement);
 
-      // ===== Label Renderer =====
       const labelRenderer = new THREE.CSS2DRenderer();
       labelRenderer.setSize(window.innerWidth, window.innerHeight);
       labelRenderer.domElement.style.position = "absolute";
@@ -128,20 +138,17 @@
       controls.dampingFactor = 0.05;
 
       // ===== Lights =====
-      const sunLight = new THREE.PointLight(0xffee88, 3, 1000);
-      sunLight.position.set(0, 0, 0);
-      scene.add(sunLight);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.15));
       const fillLight1 = new THREE.PointLight(0xffffff, 0.3, 2000);
       fillLight1.position.set(500, 200, 500);
       scene.add(fillLight1);
       const fillLight2 = new THREE.PointLight(0xffffff, 0.25, 2000);
       fillLight2.position.set(-400, -200, -300);
       scene.add(fillLight2);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
       // ===== Stars =====
       const starGeometry = new THREE.BufferGeometry();
-      const starCount = 2000;
+      const starCount = 3000;
       const starVertices = [];
       const starSpeeds = [];
       for (let i = 0; i < starCount; i++) {
@@ -156,32 +163,29 @@
         "position",
         new THREE.Float32BufferAttribute(starVertices, 3)
       );
-
       const starTexture = new THREE.TextureLoader().load(
         "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/circle.png"
       );
-
       const starMaterial = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 1.2,
+        size: 3,
         map: starTexture,
         transparent: true,
         opacity: 0.8,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-
       const stars = new THREE.Points(starGeometry, starMaterial);
       scene.add(stars);
 
       function animateStars(factor = 1) {
         const positions = stars.geometry.attributes.position.array;
         for (let i = 0; i < positions.length; i += 3) {
-          positions[i + 2] += starSpeeds[i / 3] * factor;
-          if (positions[i + 2] > 1000) {
-            positions[i + 2] = -5000 - Math.random() * 1000;
+          positions[i + 1] += starSpeeds[i / 3] * factor;
+          if (positions[i + 1] > 500) {
+            positions[i + 1] = -500 - Math.random() * 1000;
             positions[i] = (Math.random() - 0.5) * 4000;
-            positions[i + 1] = (Math.random() - 0.5) * 4000;
+            positions[i + 2] = (Math.random() - 0.5) * 4000;
           }
         }
         stars.geometry.attributes.position.needsUpdate = true;
@@ -283,10 +287,33 @@
       const loaderDiv = document.getElementById("loader");
       const loadingText = document.getElementById("loading-text");
 
-      planets.forEach((planet) => {
+      const spriteTexture = new THREE.TextureLoader().load(
+        "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lensflare/lensflare0.png"
+      );
+      function addGlowSpriteToMesh(
+        mesh,
+        size,
+        color = 0xffe066,
+        opacity = 0.15
+      ) {
+        const spriteMat = new THREE.SpriteMaterial({
+          map: spriteTexture,
+          color,
+          transparent: true,
+          opacity,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.scale.set(size, size, 1);
+        mesh.add(sprite);
+        sprite.position.set(0, 0, -size * 0.02);
+        return sprite;
+      }
+
+      function loadPlanetModel(planet, onLoaded) {
         gltfLoader.load(`textures/models/${planet.file}`, (gltf) => {
           const mesh = gltf.scene;
-
           const bbox = new THREE.Box3().setFromObject(mesh);
           const center = new THREE.Vector3();
           bbox.getCenter(center);
@@ -297,57 +324,45 @@
           if (planet.name === "Sun") scaleFactor *= 0.8;
           mesh.scale.setScalar(scaleFactor);
 
-          // ===== Add hyper-realistic Sun glow (reduced intensity) =====
           if (planet.name === "Sun") {
-            // 🌕 Core bright golden-yellow light (main sunlight)
-            const coreLight = new THREE.PointLight(0xffd966, 1.5, 900);
+            const coreLight = new THREE.PointLight(0xffd966, 2, 2000);
             mesh.add(coreLight);
-
-            // 🔴 Outer reddish heat haze
-            const redGlow = new THREE.PointLight(0xff3300, 0.15, 1200);
+            const redGlow = new THREE.PointLight(0xff3300, 0.2, 2500);
             mesh.add(redGlow);
-
-            // 🟡 Soft yellow rim light for brightness balance
-            const yellowGlow = new THREE.PointLight(0xffee88, 0.4, 700);
+            const yellowGlow = new THREE.PointLight(0xffee88, 0.5, 1500);
             mesh.add(yellowGlow);
-
-            // ✨ Surface emissive tint (golden-orange)
             mesh.traverse((child) => {
               if (child.isMesh && child.material) {
-                child.material.emissive = new THREE.Color(0xffb84d);
-                child.material.emissiveIntensity = 0.2;
+                try {
+                  child.material.emissive = new THREE.Color(0xffb84d);
+                  child.material.emissiveIntensity = 0.4;
+                } catch (e) {}
               }
             });
-
-            // 🌟 Add soft corona halo (outer sunlight haze)
-            const textureLoader = new THREE.TextureLoader();
-            const glowTexture = textureLoader.load(
-              "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lensflare/lensflare0.png"
-            );
-            const glowMaterial = new THREE.SpriteMaterial({
-              map: glowTexture,
-              color: 0xffe066,
-              transparent: true,
-              opacity: 0.25,
-              blending: THREE.AdditiveBlending,
-              depthWrite: false,
-            });
-            const glowSprite = new THREE.Sprite(glowMaterial);
-            glowSprite.scale.set(180, 180, 1);
-            mesh.add(glowSprite);
-
-            // 🔥 Flickering animation for natural sunlight effect (reduced amplitude)
+            const glowSprite = addGlowSpriteToMesh(mesh, 400, 0xffe066, 0.25);
             const flicker = { t: 0 };
             const updateFlicker = () => {
               flicker.t += 0.035;
-              coreLight.intensity = 1.5 + Math.sin(flicker.t * 1.2) * 0.1;
-              yellowGlow.intensity = 0.4 + Math.sin(flicker.t * 0.8) * 0.05;
-              redGlow.intensity = 0.15 + Math.sin(flicker.t * 0.6) * 0.03;
-              glowSprite.material.opacity =
-                0.25 + Math.sin(flicker.t * 0.4) * 0.02;
+              coreLight.intensity = 2 + Math.sin(flicker.t * 1.2) * 0.1;
+              yellowGlow.intensity = 0.5 + Math.sin(flicker.t * 0.8) * 0.05;
+              redGlow.intensity = 0.2 + Math.sin(flicker.t * 0.6) * 0.03;
+              if (glowSprite && glowSprite.material)
+                glowSprite.material.opacity =
+                  0.25 + Math.sin(flicker.t * 0.4) * 0.02;
               requestAnimationFrame(updateFlicker);
             };
             updateFlicker();
+          } else {
+            addGlowSpriteToMesh(mesh, planet.radius * 10 + 40, 0xffffff, 0.08);
+            mesh.traverse((child) => {
+              if (child.isMesh && child.material) {
+                try {
+                  child.material.emissive = new THREE.Color(0x222222);
+                  child.material.emissiveIntensity = 0.08;
+                  child.material.needsUpdate = true;
+                } catch (e) {}
+              }
+            });
           }
 
           const pivot = new THREE.Object3D();
@@ -356,7 +371,7 @@
           solarSystem.add(pivot);
           mesh.position.x = planet.distance;
 
-          // ===== Orbit Rings =====
+          // Orbit Rings
           if (planet.distance > 0) {
             const orbit = new THREE.RingGeometry(
               planet.distance - 0.08,
@@ -372,12 +387,12 @@
             });
             const orbitMesh = new THREE.Mesh(orbit, orbitMat);
             orbitMesh.rotation.x = Math.PI / 2;
-            orbitMesh.visible = false; // hide initially
-            solarSystem.add(orbitMesh); // add to solarSystem
+            orbitMesh.visible = false;
+            solarSystem.add(orbitMesh);
             orbitMeshes.push(orbitMesh);
           }
 
-          // ===== Labels =====
+          // Labels
           const div = document.createElement("div");
           div.className = "planet-label";
           div.textContent = `${planet.name}: ${planet.info}`;
@@ -392,70 +407,160 @@
           mesh.add(label);
 
           planetMeshes.push({ mesh, pivot, planet, label });
+          updateMeshMap();
+          onLoaded();
+        });
+      }
+
+      planets.forEach((planet) => {
+        loadPlanetModel(planet, () => {
           planetsLoaded++;
           loadingText.textContent = `Loading ${Math.floor(
             (planetsLoaded / planets.length) * 100
           )}%`;
-
           if (planetsLoaded === planets.length) {
-            gsap.to(loaderDiv, {
-              opacity: 0,
-              duration: 1,
-              onComplete: () => {
-                loaderDiv.style.display = "none";
-
-                // Animate Solar System Scale Up
-                solarSystem.scale.set(0.01, 0.01, 0.01);
-                gsap.to(solarSystem.scale, {
-                  x: 1,
-                  y: 1,
-                  z: 1,
-                  duration: 2,
-                  ease: "power2.out",
-                  onUpdate: () => {
-                    orbitMeshes.forEach((ring) => (ring.visible = true));
-                  },
-                });
-
-                // Camera entrance
-                gsap.fromTo(
-                  camera.position,
-                  { z: 500, y: 100 },
-                  {
-                    z: 250,
-                    y: 50,
-                    duration: 3,
-                    ease: "power2.out",
-                    onUpdate: () => camera.lookAt(0, 0, 0),
-                  }
-                );
-
-                // Stars warp
-                const starEntrance = { factor: 1 };
-                gsap.to(starEntrance, {
-                  factor: 10,
-                  duration: 2.5,
-                  ease: "power2.out",
-                  onUpdate: () => animateStars(starEntrance.factor),
-                });
-              },
-            });
+            showSpecialModelsThenSolarSystem();
           }
         });
       });
 
-      // ===== Raycaster for Hover Labels =====
+      // ===== Special Cinematic Sequence (Moon1 & Mercury1 without light/glow) =====
+      function showSpecialModelsThenSolarSystem() {
+        const specialModels = [
+          {
+            file: "moon1.glb",
+            name: "Moon1",
+            info: "Moon is Earth's only natural satellite with 27% of Earth's size.",
+          },
+          {
+            file: "mercury1.glb",
+            name: "Mercury1",
+            info: "Mercury is closest to Sun and very hot, rocky planet.",
+          },
+        ];
+        const tempGroup = new THREE.Group();
+        scene.add(tempGroup);
+
+        function loadAndAnimate(model, startY, delay = 0, onComplete) {
+          gltfLoader.load(`textures/models/${model.file}`, (gltf) => {
+            const mesh = gltf.scene;
+            mesh.scale.set(1, 1, 1);
+            mesh.position.set(0, startY, 0);
+            tempGroup.add(mesh);
+
+            // Remove only lights/glow for these special models
+            mesh.traverse((child) => {
+              if (child.isLight) child.parent.remove(child);
+              if (child.isMesh && child.material) {
+                child.material.emissive = new THREE.Color(0x000000);
+                child.material.emissiveIntensity = 0;
+                if ("metalness" in child.material) child.material.metalness = 0;
+                if ("roughness" in child.material) child.material.roughness = 1;
+                child.material.needsUpdate = true;
+              }
+            });
+
+            const infoDiv = document.createElement("div");
+            infoDiv.className = "info-box";
+            infoDiv.textContent = model.info;
+            infoDiv.style.opacity = 0;
+            const infoLabel = new THREE.CSS2DObject(infoDiv);
+            infoLabel.position.set(200, 0, 0);
+            mesh.add(infoLabel);
+
+            const tl = gsap.timeline({ delay });
+            tl.to(mesh.position, { y: 0, duration: 7, ease: "power2.out" })
+              .to(
+                mesh.scale,
+                { x: 0, y: 0, z: 0, duration: 7, ease: "power2.inOut" },
+                0
+              )
+              .to(
+                infoDiv.style,
+                {
+                  opacity: 1,
+                  duration: 0.5,
+                  onComplete: () => {
+                    setTimeout(
+                      () =>
+                        gsap.to(infoDiv.style, { opacity: 0, duration: 0.5 }),
+                      3000
+                    );
+                  },
+                },
+                0
+              )
+              .eventCallback("onComplete", () => {
+                tempGroup.remove(mesh);
+                if (onComplete) onComplete();
+              });
+          });
+        }
+
+        loadAndAnimate(specialModels[0], -window.innerHeight * 0.4, 1);
+        loadAndAnimate(specialModels[1], -window.innerHeight, 3, () => {
+          solarSystem.position.set(0, 0, 0);
+          solarSystem.scale.set(0.01, 0.01, 0.01);
+          gsap.to(solarSystem.scale, {
+            x: 1,
+            y: 1,
+            z: 1,
+            duration: 7,
+            ease: "power2.inOut",
+          });
+          gsap.to(camera.position, {
+            x: camera.position.x,
+            y: camera.position.y,
+            z: 250,
+            duration: 7,
+            ease: "power2.out",
+            onUpdate: () => camera.lookAt(0, 0, 0),
+          });
+          orbitMeshes.forEach((r) => (r.visible = true));
+        });
+
+        gsap.to(loaderDiv, {
+          opacity: 0,
+          duration: 1,
+          onComplete: () => (loaderDiv.style.display = "none"),
+        });
+      }
+
+      // ===== Raycaster Hover =====
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
-      window.addEventListener("mousemove", (e) => {
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      const meshToPlanet = new Map();
+
+      function updateMeshMap() {
+        meshToPlanet.clear();
+        planetMeshes.forEach((p) => {
+          p.mesh.traverse((child) => {
+            if (child.isMesh) meshToPlanet.set(child, p);
+          });
+        });
+      }
+      updateMeshMap();
+
+      window.addEventListener("mousemove", (event) => {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
       });
 
-      // ===== Animate Loop =====
+      function checkHover() {
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(
+          Array.from(meshToPlanet.keys())
+        );
+        planetMeshes.forEach((p) => (p.label.visible = false));
+        if (intersects.length > 0) {
+          const planet = meshToPlanet.get(intersects[0].object);
+          if (planet) planet.label.visible = true;
+        }
+      }
+
+      // ===== Animation Loop =====
       function animate() {
         requestAnimationFrame(animate);
-
         planetMeshes.forEach((p) => {
           if (p.planet.distance > 0) {
             p.pivot.userData.angle += p.planet.speed;
@@ -464,35 +569,12 @@
             p.mesh.position.z = Math.sin(a) * p.planet.distance;
           }
           p.mesh.rotation.y += p.planet.rotation;
-          p.label.visible = false;
         });
-
         animateStars();
-
-        if (planetsLoaded === planets.length) {
-          raycaster.setFromCamera(mouse, camera);
-          const objectsToIntersect = [];
-          planetMeshes.forEach((p) =>
-            p.mesh.traverse((c) => c.isMesh && objectsToIntersect.push(c))
-          );
-          const intersects = raycaster.intersectObjects(objectsToIntersect);
-          if (intersects.length > 0) {
-            let obj = intersects[0].object;
-            let p = null;
-            while (obj) {
-              p = planetMeshes.find(
-                (pm) => pm.mesh === obj || pm.mesh.children.includes(obj)
-              );
-              if (p) break;
-              obj = obj.parent;
-            }
-            if (p) p.label.visible = true;
-          }
-        }
-
-        controls.update();
+        checkHover();
         renderer.render(scene, camera);
         labelRenderer.render(scene, camera);
+        controls.update();
       }
       animate();
 
