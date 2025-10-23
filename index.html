@@ -1,118 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Solar System - Scroll Controlled</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Scroll Controlled Video + Three.js Solar System (Merged)</title>
     <style>
+      :root {
+        --bg: #000;
+      }
+      html,
       body {
         margin: 0;
-        height: 400vh;
-        background: black;
+        padding: 0;
+        background: var(--bg);
+        height: 100%;
+        overflow: auto;
         font-family: Arial, sans-serif;
-        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
       }
-
-      .planet-label {
-        color: white;
-        font-size: clamp(12px, 1.2vw, 16px);
-        font-weight: bold;
-        pointer-events: none;
-        text-align: center;
-        text-shadow: 0 0 5px black;
-      }
-      @media (max-width: 768px) {
-        body {
-          height: 600vh;
-        }
-        .planet-label {
-          max-width: 120px;
-          font-size: clamp(10px, 2vw, 14px);
-        }
-      }
-
-      #loader {
-        position: fixed;
+      #scrollContainer {
+        position: absolute;
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
-        background: black;
-        z-index: 9999;
+        height: 800vh;
+        pointer-events: none;
+      }
+      #loader {
+        position: fixed;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
+        z-index: 10000;
+        background: black;
       }
       #loading-text {
         color: white;
+        font-family: "Poppins", sans-serif;
         font-size: clamp(16px, 1.5vw, 22px);
         margin-top: 20px;
       }
-      #fynixText {
+      #topText {
         position: fixed;
-        top: 35%;
+        top: 40%;
         left: 50%;
-        transform: translate(-50%, -50%) scale(1);
-        color: #ffffff;
-        font-size: clamp(1.5rem, 2.5vw, 2.5rem);
-        font-weight: 800;
-        text-align: center;
-        letter-spacing: 1.5px;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.8),
-          0 0 25px rgba(255, 255, 255, 0.6);
-        /* transition: transform 0.2s ease, opacity 0.5s ease; */
-        opacity: 0; /* <-- hidden before loader ends */
-        visibility: hidden; /* <-- prevent clicks */
-        z-index: 10000;
+        transform: translateX(-50%);
+        color: white;
+        font-size: clamp(12px, 6vw, 120px);
+        font-weight: 700;
+        z-index: 9000;
         pointer-events: none;
-      }
-
-      #astronaut {
-        position: fixed;
-        left: 50%;
-        width: clamp(200px, 20vw, 350px);
-        height: auto;
-        pointer-events: none;
+        white-space: nowrap;
         opacity: 0;
-        visibility: hidden;
-        transform: translateX(-50%) translateY(0) scale(1);
-
-        z-index: 11000; /* Astronaut hamesha upar */
       }
-      #moon {
+      #solarText {
         position: fixed;
-        bottom: -250px; /* 👈 aur niche shift kar diya (was 20px) */
+        top: 10%;
         left: 50%;
-        transform: translateX(-50%) scale(1.5);
-        opacity: 0;
-        visibility: hidden;
+        transform: translateX(-50%);
+        color: white;
+        font-size: clamp(12px, 4vw, 80px);
+        font-weight: 600;
+        z-index: 9000;
         pointer-events: none;
-        z-index: 10000;
+        white-space: nowrap;
+        opacity: 1; /* Ensure initial opacity is 1 */
       }
-
-      @media (max-width: 768px) {
-        #moon {
-          bottom: -8%; /* 👈 mobile ke liye aur niche */
-          transform: translateX(-50%) scale(1.2);
-        }
+      #videoSection {
+        position: fixed;
+        inset: 0;
+        z-index: 8000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: black;
+        pointer-events: none;
+        visibility: hidden;
       }
-
-      .info-box {
-        background: white;
-        color: black;
-        padding: 10px;
-        border-radius: 5px;
-        font-size: 14px;
-        max-width: 200px;
-        text-align: left;
-      }
-      canvas {
+      #astronautVideo {
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
         display: block;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.6s linear, visibility 0s linear 0.6s;
       }
-      #moon {
-        width: clamp(120px, 15vw, 200px);
-        height: auto;
+      canvas,
+      .three-canvas {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        z-index: 7000;
+        pointer-events: auto;
+        width: 100% !important;
+        height: 100% !important;
+        opacity: 0;
+        transition: opacity 0.6s linear;
+      }
+      .planet-label {
+        color: white;
+        font-size: clamp(10px, 1.2vw, 16px);
+        font-weight: bold;
+        pointer-events: none;
+        text-shadow: 0 0 5px black;
+      }
+      html {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      html::-webkit-scrollbar {
+        display: none;
+      }
+      @media (max-width: 768px) {
+        #scrollContainer {
+          height: 1200vh;
+        }
+        #solarText {
+          font-size: clamp(10px, 3.5vw, 60px); /* Smaller font for mobile */
+        }
       }
     </style>
   </head>
@@ -121,29 +129,36 @@
       <canvas id="loaderCanvas" width="200" height="200"></canvas>
       <div id="loading-text">Loading 0%</div>
     </div>
-    <div id="fynixText">hey we are fynix</div>
-    <img id="astronaut" src="textures/models/astronaut.png" alt="Astronaut" />
-    <!-- Special Moon -->
-    <img
-      id="moon"
-      src="textures/models/moon1.png"
-      style="
-        transform: translateX(-50%) translateY(0) scale(1.5);
-        pointer-events: none;
-      "
-    />
-
-    <!-- ===== Libraries ===== -->
+    <div id="topText"></div>
+    <div id="solarText"></div>
+    <div id="videoSection">
+      <video
+        id="astronautVideo"
+        src="textures/models/video.mp4"
+        type="video/mp4"
+        muted
+        playsinline
+        preload="auto"
+      ></video>
+    </div>
+    <div id="scrollContainer"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
-
     <script>
-      // ===== Loader Animation =====
+      const loaderDiv = document.getElementById("loader");
       const loaderCanvas = document.getElementById("loaderCanvas");
-      const ctx = loaderCanvas.getContext("2d");
+      const loaderCtx = loaderCanvas.getContext("2d");
+      const loadingText = document.getElementById("loading-text");
+      const astronautVideo = document.getElementById("astronautVideo");
+      const videoSection = document.getElementById("videoSection");
+      const topText = document.getElementById("topText");
+      const solarText = document.getElementById("solarText");
+      const scrollContainer = document.getElementById("scrollContainer");
+
+      /* ---------- Loader animation (mini-planets) ---------- */
       const loaderSunRadius = 20;
       const miniPlanets = [];
       for (let i = 0; i < 5; i++) {
@@ -156,89 +171,177 @@
         });
       }
       function drawLoader() {
-        ctx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
-        ctx.save();
-        ctx.translate(loaderCanvas.width / 2, loaderCanvas.height / 2);
-
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, loaderSunRadius);
+        loaderCtx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
+        loaderCtx.save();
+        loaderCtx.translate(loaderCanvas.width / 2, loaderCanvas.height / 2);
+        const grad = loaderCtx.createRadialGradient(
+          0,
+          0,
+          0,
+          0,
+          0,
+          loaderSunRadius
+        );
         grad.addColorStop(0, "#ffff33");
         grad.addColorStop(1, "rgba(255,255,0,0)");
-        ctx.beginPath();
-        ctx.arc(0, 0, loaderSunRadius, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
+        loaderCtx.beginPath();
+        loaderCtx.arc(0, 0, loaderSunRadius, 0, Math.PI * 2);
+        loaderCtx.fillStyle = grad;
+        loaderCtx.fill();
         miniPlanets.forEach((p) => {
           p.angle += p.speed;
           const x = Math.cos(p.angle) * p.radius;
           const y = Math.sin(p.angle) * p.radius;
-          const planetGrad = ctx.createRadialGradient(x, y, 0, x, y, p.size);
+          const planetGrad = loaderCtx.createRadialGradient(
+            x,
+            y,
+            0,
+            x,
+            y,
+            p.size
+          );
           planetGrad.addColorStop(0, "white");
           planetGrad.addColorStop(0.3, p.color);
           planetGrad.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.beginPath();
-          ctx.arc(x, y, p.size + 2, 0, Math.PI * 2);
-          ctx.fillStyle = planetGrad;
-          ctx.fill();
+          loaderCtx.beginPath();
+          loaderCtx.arc(x, y, p.size + 2, 0, Math.PI * 2);
+          loaderCtx.fillStyle = planetGrad;
+          loaderCtx.fill();
         });
-        ctx.restore();
+        loaderCtx.restore();
         requestAnimationFrame(drawLoader);
       }
       drawLoader();
 
-      // ===== Three.js Scene =====
+      /* ---------- Real asset loading progress ---------- */
+      let loadedAssets = 0;
+      const totalAssets = 1 + 9; // video + 9 planet models
+      function updateProgress() {
+        const loadingProgress = Math.floor((loadedAssets / totalAssets) * 100);
+        loadingText.textContent = `Loading ${loadingProgress}%`;
+        if (loadedAssets === totalAssets) {
+          gsap.to(loaderDiv, {
+            opacity: 0,
+            duration: 0.8,
+            onComplete: () => {
+              loaderDiv.style.display = "none";
+              window.scrollTo(0, 0);
+              astronautVideo.currentTime = 0;
+              astronautVideo.style.visibility = "visible";
+              astronautVideo.style.opacity = 1;
+              videoSection.style.visibility = "visible";
+              document.body.style.overflowY = "auto";
+              showTextAnimation();
+              initSolarText();
+              if (astronautVideo.readyState >= 4) {
+                initScrollControl();
+              } else {
+                astronautVideo.addEventListener(
+                  "canplaythrough",
+                  initScrollControl,
+                  { once: true }
+                );
+              }
+            },
+          });
+        }
+      }
+      astronautVideo.addEventListener("canplaythrough", () => {
+        loadedAssets++;
+        updateProgress();
+      });
+
+      /* ---------- Text animation for topText ---------- */
+      function showTextAnimation() {
+        const text = "Hey, we are Fynix";
+        topText.innerHTML = "";
+        const parts = text.split(", we are");
+        const before = parts[0];
+        const after = ", we are";
+        const last = parts[1];
+        before.split("").forEach((char) => {
+          const span = document.createElement("span");
+          span.textContent = char === " " ? "\u00A0" : char;
+          span.style.opacity = 0;
+          span.style.transform = "translateY(30px)";
+          topText.appendChild(span);
+        });
+        const weAreSpan = document.createElement("span");
+        weAreSpan.id = "weAreSpan";
+        weAreSpan.style.display = "inline-block";
+        weAreSpan.style.whiteSpace = "nowrap";
+        weAreSpan.style.transition = "opacity 0.3s linear, width 0.3s linear";
+        topText.appendChild(weAreSpan);
+        after.split("").forEach((char) => {
+          const span = document.createElement("span");
+          span.textContent = char;
+          span.style.opacity = 0;
+          span.style.transform = "translateY(30px)";
+          weAreSpan.appendChild(span);
+        });
+        last.split("").forEach((char) => {
+          const span = document.createElement("span");
+          span.textContent = char;
+          span.style.opacity = 0;
+          span.style.transform = "translateY(30px)";
+          topText.appendChild(span);
+        });
+        const allSpans = topText.querySelectorAll("span span, #topText > span");
+        gsap.to(topText, { opacity: 1, duration: 0.5, ease: "power2.out" });
+        gsap.to(allSpans, {
+          opacity: 1,
+          y: 0,
+          stagger: 0.08,
+          ease: "power2.out",
+          duration: 0.6,
+          delay: 0.3,
+        });
+      }
+
+      /* ---------- Initialize solarText spans without animation ---------- */
+      function initSolarText() {
+        const text = "A Creative space Designed by Designers for Designers";
+        solarText.innerHTML = "";
+        text.split("").forEach((char) => {
+          const span = document.createElement("span");
+          span.textContent = char === " " ? "\u00A0" : char;
+          span.style.opacity = 0;
+          span.style.transform = "translateY(30px)";
+          span.style.display = "inline-block";
+          span.style.transition = "opacity 0.3s ease, transform 0.3s ease"; // Smooth transitions
+          solarText.appendChild(span);
+        });
+      }
+
+      /* ---------- THREE.JS: Scene & Renderer ---------- */
       const scene = new THREE.Scene();
-
-      // ===== Galaxy Background Plane =====
-      const textureLoader = new THREE.TextureLoader();
-      const galaxyTexture = textureLoader.load(
-        "textures/models/galaxy.png",
-        () => console.log("Galaxy texture loaded successfully"),
-        undefined,
-        (err) => console.error("Error loading galaxy texture:", err)
-      );
-
-      const bgGeometry = new THREE.PlaneGeometry(2000, 2000);
-      const bgMaterial = new THREE.MeshBasicMaterial({
-        map: galaxyTexture,
-        side: THREE.DoubleSide,
-      });
-
-      const galaxyPlane = new THREE.Mesh(bgGeometry, bgMaterial);
-      galaxyPlane.position.set(0, 0, -1500); // closer to camera
-      // Galaxy Sphere
-      const galaxyGeometry = new THREE.SphereGeometry(1500, 64, 64); // radius same
-      const galaxyMaterial = new THREE.MeshBasicMaterial({
-        map: galaxyTexture,
-        side: THREE.BackSide,
-        transparent: true,
-        opacity: 0.3,
-        blending: THREE.NormalBlending,
-      });
-      const galaxySphere = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
-      scene.add(galaxySphere);
-
       const camera = new THREE.PerspectiveCamera(
         75,
         window.innerWidth / window.innerHeight,
         0.1,
         10000
       );
-
       camera.position.set(0, 50, 350);
-
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+      });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.domElement.classList.add("three-canvas");
+      renderer.domElement.style.opacity = 0;
+      renderer.domElement.style.visibility = "hidden";
       document.body.appendChild(renderer.domElement);
 
-      // CSS2DRenderer
       const labelRenderer = new THREE.CSS2DRenderer();
       labelRenderer.setSize(window.innerWidth, window.innerHeight);
       labelRenderer.domElement.style.position = "absolute";
       labelRenderer.domElement.style.top = "0px";
       labelRenderer.domElement.style.pointerEvents = "none";
+      labelRenderer.domElement.style.zIndex = "9999";
+      labelRenderer.domElement.style.opacity = 0;
+      labelRenderer.domElement.style.visibility = "hidden";
       document.body.appendChild(labelRenderer.domElement);
 
       const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -255,71 +358,59 @@
       fillLight2.position.set(-400, -200, -300);
       scene.add(fillLight2);
 
-      // ===== Stars =====
       const starGeometry = new THREE.BufferGeometry();
-      const starCount = 20000; // zyada stars
+      const starCount = 2000;
       const starVertices = [];
       const starSpeeds = [];
-      const spreadX = 4000; // x axis ka spread
-      const spreadY = 4000; // y axis ka spread
-      const spreadZ = 4000; // z axis ka spread
-      const minSpeed = 0.05;
-      const maxSpeed = 0.15;
-
+      const spreadX = 2000,
+        spreadY = 2000,
+        spreadZ = 2000;
+      const minSpeed = 0.05,
+        maxSpeed = 0.08;
+      const starSize = 2.5;
       for (let i = 0; i < starCount; i++) {
         const x = (Math.random() - 0.5) * spreadX;
         const y = (Math.random() - 0.5) * spreadY;
         const z = (Math.random() - 0.5) * spreadZ;
-
         starVertices.push(x, y, z);
         starSpeeds.push(Math.random() * (maxSpeed - minSpeed) + minSpeed);
       }
-
       starGeometry.setAttribute(
         "position",
         new THREE.Float32BufferAttribute(starVertices, 3)
       );
-
       const starTexture = new THREE.TextureLoader().load(
         "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/circle.png"
       );
       const starMaterial = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: 2.5, // thoda bada
+        size: starSize,
         map: starTexture,
         transparent: true,
         opacity: 0.9,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-
       const stars = new THREE.Points(starGeometry, starMaterial);
       scene.add(stars);
 
-      // Animate stars
       function animateStars(factor = 1) {
         const positions = stars.geometry.attributes.position.array;
-
         for (let i = 0; i < positions.length; i += 3) {
           positions[i + 1] += starSpeeds[i / 3] * factor;
-
-          // Vertically wrap kare
           if (positions[i + 1] > spreadY / 2) {
             positions[i + 1] = -spreadY / 2;
             positions[i] = (Math.random() - 0.5) * spreadX;
             positions[i + 2] = (Math.random() - 0.5) * spreadZ;
           }
         }
-
         stars.geometry.attributes.position.needsUpdate = true;
       }
 
-      // ===== Solar System Setup =====
       const gltfLoader = new THREE.GLTFLoader();
       const solarSystem = new THREE.Group();
       solarSystem.scale.set(0.01, 0.01, 0.01);
       scene.add(solarSystem);
-
       const planets = [
         {
           name: "Sun",
@@ -400,15 +491,11 @@
           speed: 0.0009,
           rotation: 0.003,
           file: "neptune.glb",
-          info: "Rotates on side.",
+          info: "Far gas giant.",
         },
       ];
-
       const planetMeshes = [];
       const orbitMeshes = [];
-      let planetsLoaded = 0;
-      const loaderDiv = document.getElementById("loader");
-      const loadingText = document.getElementById("loading-text");
       const spriteTexture = new THREE.TextureLoader().load(
         "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lensflare/lensflare0.png"
       );
@@ -446,7 +533,6 @@
           let scaleFactor = planet.radius / Math.max(size.x, size.y, size.z);
           if (planet.name === "Sun") scaleFactor *= 0.8;
           mesh.scale.setScalar(scaleFactor);
-
           if (planet.name === "Sun") {
             const coreLight = new THREE.PointLight(0xffd966, 1.2, 1500);
             mesh.add(coreLight);
@@ -463,16 +549,15 @@
               }
             });
             addGlowSpriteToMesh(mesh, 100, 0xffe066, 0.12);
-          } else
+          } else {
             addGlowSpriteToMesh(mesh, planet.radius * 10 + 40, 0xffffff, 0.08);
-
+          }
           const pivot = new THREE.Object3D();
           pivot.rotation.y = Math.random() * Math.PI * 2;
           pivot.userData.speed = planet.speed;
           mesh.position.set(planet.distance, 0, 0);
           pivot.add(mesh);
           solarSystem.add(pivot);
-
           let label = null;
           if (planet.name !== "Mars") {
             const div = document.createElement("div");
@@ -485,7 +570,6 @@
           }
           mesh.userData.label = label;
           mesh.userData.isPlanet = true;
-
           if (planet.distance > 0) {
             const ringWidth = Math.max(0.06, planet.radius * 0.02 + 0.02);
             const orbit = new THREE.RingGeometry(
@@ -506,101 +590,12 @@
             solarSystem.add(orbitMesh);
             orbitMeshes.push(orbitMesh);
           }
-
           planetMeshes.push({ mesh, pivot, planet });
-          planetsLoaded++;
-          loadingText.textContent = `Loading ${Math.floor(
-            (planetsLoaded / planets.length) * 100
-          )}%`;
-
-          if (planetsLoaded === planets.length) {
-            loaderDiv.style.opacity = 0;
-            loaderDiv.style.display = "none";
-            document.getElementById("astronaut").style.visibility = "visible";
-            document.getElementById("astronaut").style.opacity = 1;
-            document.getElementById("moon").style.visibility = "visible";
-            document.getElementById("moon").style.opacity = 1;
-            const fynixText = document.getElementById("fynixText");
-            fynixText.style.visibility = "visible";
-            fynixText.style.opacity = 1;
-          }
+          loadedAssets++;
+          updateProgress();
         });
       }
       planets.forEach(loadPlanetModel);
-
-      let scrollProgress = 0,
-        targetScroll = 0;
-      const scrollHeight = window.innerHeight * 4;
-
-      window.addEventListener("wheel", (e) => {
-        targetScroll += e.deltaY;
-        targetScroll = Math.min(Math.max(targetScroll, 0), scrollHeight);
-      });
-
-      function updateScrollAnimation() {
-        // Smooth interpolation
-        scrollProgress += (targetScroll - scrollProgress) * 0.1;
-        const eased = Math.min(Math.max(scrollProgress / scrollHeight, 0), 1);
-
-        // ===== Scale factor for responsive =====
-        const scaleFactor = window.innerWidth < 768 ? 0.7 : 1;
-
-        // ===== Astronaut =====
-        const astronaut = document.getElementById("astronaut");
-
-        // Fixed bottom positions in px (not multiplied by scale or zoom)
-        let startBottom = window.innerHeight * 0.25; // starting point
-        let endBottom = window.innerHeight * 0.57; // ending point
-
-        // Scale values
-        let startScale = 2.5;
-        let endScale = 0.5;
-
-        const astroBottomPx = startBottom + (endBottom - startBottom) * eased;
-        const astroScale = startScale - (startScale - endScale) * eased;
-
-        astronaut.style.bottom = `${astroBottomPx}px`;
-        astronaut.style.transform = `translateX(-50%) scale(${astroScale})`;
-        astronaut.style.opacity = 1 - eased;
-
-        // ===== Moon =====
-        const moon = document.getElementById("moon");
-        const moonScale =
-          window.innerWidth < 768 ? 2.2 - 2.19 * eased : 3.5 - 3.49 * eased;
-        const moonOpacity = 1 - Math.pow(eased, 1.5);
-        const moonScrollOffset =
-          window.innerWidth < 768
-            ? eased * -window.innerHeight * 0.6
-            : eased * -window.innerHeight * 0.85;
-        moon.style.transform = `translateX(-50%) translateY(${moonScrollOffset}px) scale(${moonScale})`;
-        moon.style.opacity = moonOpacity;
-
-        // ===== Fynix Text =====
-        const fynixText = document.getElementById("fynixText");
-        let fynixProgress = eased;
-        fynixProgress = Math.min(Math.max(fynixProgress, 0), 1);
-        const fynixScale = 1.2 - 0.7 * fynixProgress;
-        const fynixOpacity = 1 - fynixProgress;
-        const fynixTop = 35 - 20 * fynixProgress;
-        fynixText.style.transform = `translate(-50%, -50%) scale(${
-          fynixScale * scaleFactor
-        })`;
-        fynixText.style.opacity = fynixOpacity;
-        fynixText.style.top = `${fynixTop}%`;
-
-        // ===== Solar System =====
-        const solarProgress = Math.min(Math.max((eased - 0.55) / 0.45, 0), 1);
-        const baseScale = 0.15 + (0.8 - 0.15) * solarProgress;
-        solarSystem.scale.setScalar(baseScale * scaleFactor); // apply mobile scale
-
-        solarSystem.position.y =
-          -window.innerHeight * 0.99 +
-          window.innerHeight * 0.99 * solarProgress;
-
-        // Camera zoom slightly more on mobile
-        camera.position.z = (350 - 150 * solarProgress) * scaleFactor;
-        camera.lookAt(0, 0, 0);
-      }
 
       function updateMeshMap() {
         planetMeshes.forEach((p) => {
@@ -610,32 +605,21 @@
         orbitMeshes.forEach((mesh) => (mesh.rotation.z += 0.0002));
       }
 
-      // ===== Hover Info =====
       const raycaster = new THREE.Raycaster();
-      let mouseX = 0,
-        mouseY = 0;
       const mouse = new THREE.Vector2();
       let lastHoveredPlanet = null;
-
       window.addEventListener("mousemove", (event) => {
-        // ===== Parallax =====
-        mouseX = (event.clientX / window.innerWidth - 0.5) * 2;
-        mouseY = (event.clientY / window.innerHeight - 0.5) * 2;
-
-        // ===== Hover detection =====
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(
           planetMeshes.map((p) => p.mesh),
           true
         );
-
-        if (lastHoveredPlanet && lastHoveredPlanet.userData.label)
+        if (lastHoveredPlanet && lastHoveredPlanet.userData.label) {
           lastHoveredPlanet.userData.label.visible = false;
+        }
         lastHoveredPlanet = null;
-
         if (intersects.length > 0) {
           let planet = intersects[0].object;
           while (planet && !planet.userData.isPlanet) planet = planet.parent;
@@ -646,26 +630,205 @@
         }
       });
 
-      function animate() {
-        requestAnimationFrame(animate);
-        // Animate background movement
-        galaxyPlane.position.x = mouseX * 50; // adjust multiplier for speed
-        galaxyPlane.position.y = -mouseY * 50;
+      /* ---------- Scroll / Phase control logic ---------- */
+      let targetProgress = 0;
+      let currentProgress = 0;
+      let smoothTime = 0.05;
+      let lastScroll = 0;
+      let videoDuration = 0;
+      astronautVideo.addEventListener("loadedmetadata", () => {
+        videoDuration = astronautVideo.duration || 0;
+      });
+      astronautVideo.pause();
+
+      function initScrollControl() {
+        window.addEventListener("scroll", () => {
+          const now = performance.now();
+          if (now - lastScroll > 10) {
+            const scrollY = window.scrollY;
+            const scrollHeight =
+              scrollContainer.offsetHeight - window.innerHeight;
+            targetProgress = Math.min(scrollY / scrollHeight, 1);
+            lastScroll = now;
+          }
+        });
+
+        astronautVideo.addEventListener("ended", () => {
+          gsap.to(astronautVideo, {
+            opacity: 0,
+            duration: 2,
+            onComplete: () => {
+              astronautVideo.style.visibility = "hidden";
+              videoSection.style.display = "none";
+            },
+          });
+        });
+
+        requestAnimationFrame(mainLoop);
+      }
+
+      function mainLoop() {
+        currentProgress += (targetProgress - currentProgress) * smoothTime;
+        const phaseSplit = 0.7;
+        const videoProgress = Math.min(
+          Math.max(currentProgress / phaseSplit, 0),
+          1
+        );
+        const videoOpacity = 1 - Math.min(1, videoProgress * 1.2);
+
+        // Update video time
+        if (
+          videoDuration &&
+          astronautVideo.readyState >= 2 &&
+          videoOpacity > 0
+        ) {
+          const desiredTime = Math.max(
+            0,
+            Math.min(videoDuration * videoProgress, videoDuration - 0.01)
+          );
+          if (Math.abs(astronautVideo.currentTime - desiredTime) > 0.05) {
+            astronautVideo.currentTime = desiredTime;
+          }
+        }
+
+        // Top text animations
+        let fadeStart = 0.05,
+          fadeEnd = 0.25;
+        let fadeProgress = (videoProgress - fadeStart) / (fadeEnd - fadeStart);
+        fadeProgress = Math.min(Math.max(fadeProgress, 0), 1);
+        const weAreSpan = document.getElementById("weAreSpan");
+        if (weAreSpan) {
+          weAreSpan.style.opacity = 1 - fadeProgress;
+          weAreSpan.style.width = `${
+            (1 - fadeProgress) * weAreSpan.scrollWidth
+          }px`;
+        }
+        const heyFynixProgress = Math.max((videoProgress - 0.25) / 0.75, 0);
+        const scale = 1 - heyFynixProgress * 0.5;
+        const textOpacity = 1 - heyFynixProgress * 1;
+        const initialFontSize = 10;
+        const minFontSize = 1;
+        const fontSize =
+          initialFontSize - heyFynixProgress * (initialFontSize - minFontSize);
+        topText.style.transform = `translateX(-50%) scale(${scale})`;
+        topText.style.opacity = textOpacity;
+        topText.style.fontSize = `${fontSize}vw`;
+
+        // Video visibility
+        astronautVideo.style.opacity = videoOpacity;
+        if (textOpacity > 0) {
+          astronautVideo.style.visibility = "visible";
+          videoSection.style.display = "flex";
+          videoSection.style.visibility = "visible";
+        } else {
+          astronautVideo.style.visibility = "hidden";
+          videoSection.style.display = "none";
+          videoSection.style.visibility = "hidden";
+        }
+
+        // Three.js scene and solar text
+        const sceneProgress = Math.min(
+          Math.max((currentProgress - phaseSplit) / (1 - phaseSplit), 0),
+          1
+        );
+        console.log("sceneProgress:", sceneProgress); // Debug scroll progress
+        const sceneOpacity = Math.min(1, sceneProgress * 1.05);
+        renderer.domElement.style.opacity = sceneOpacity;
+        labelRenderer.domElement.style.opacity = Math.min(1, sceneProgress);
+
+        // Solar text letter-by-letter animation
+        const allSpans = solarText.querySelectorAll("span");
+        console.log("solarText spans:", allSpans.length); // Debug span count
+        const letterProgress = sceneProgress * allSpans.length * 1.5; // Speed up letter reveal
+        allSpans.forEach((span, index) => {
+          const letterThreshold = index / allSpans.length;
+          const letterFadeProgress = Math.min(
+            Math.max((letterProgress - index) / 1.5, 0),
+            1
+          );
+          span.style.opacity = letterFadeProgress;
+          span.style.transform = `translateY(${
+            (1 - letterFadeProgress) * 30
+          }px)`;
+        });
+
+        // Solar text visibility and scaling
+        const solarScale = 1 - sceneProgress * 0.3;
+        const initialSolarFontSize = 6;
+        const minSolarFontSize = 1;
+        const solarFontSize =
+          initialSolarFontSize -
+          sceneProgress * (initialSolarFontSize - minSolarFontSize);
+        solarText.style.transform = `translateX(-50%) scale(${solarScale})`;
+        solarText.style.fontSize = `${solarFontSize}vw`;
+        solarText.style.visibility = sceneProgress > 0 ? "visible" : "hidden";
+        console.log("solarText visibility:", solarText.style.visibility); // Debug visibility
+        // --- Fade out solar text when scene fully reached ---
+        if (sceneProgress > 0.85) {
+          gsap.to(solarText, {
+            opacity: 0,
+            duration: 1,
+            ease: "power2.out",
+          });
+        } else {
+          gsap.to(solarText, {
+            opacity: 1,
+            duration: 1,
+            ease: "power2.out",
+          });
+        }
+
+        if (sceneOpacity > 0) {
+          renderer.domElement.style.visibility = "visible";
+          labelRenderer.domElement.style.visibility = "visible";
+          renderer.domElement.style.pointerEvents = "auto";
+        } else {
+          renderer.domElement.style.visibility = "hidden";
+          labelRenderer.domElement.style.visibility = "hidden";
+          renderer.domElement.style.pointerEvents = "none";
+        }
+
+        if (sceneOpacity > 0) {
+          const scaleFactor = window.innerWidth < 768 ? 0.7 : 1;
+          const baseScale = 0.15 + (0.8 - 0.15) * sceneProgress;
+          solarSystem.scale.setScalar(baseScale * scaleFactor);
+          solarSystem.position.y =
+            -window.innerHeight * 0.6 +
+            window.innerHeight * 0.6 * sceneProgress;
+          camera.position.z = (350 - 150 * sceneProgress) * scaleFactor;
+          camera.lookAt(0, 0, 0);
+          controls.enableRotate = sceneProgress > 0.15;
+        } else {
+          controls.enableRotate = false;
+        }
 
         updateMeshMap();
         animateStars(2);
-        updateScrollAnimation();
         controls.update();
         renderer.render(scene, camera);
         labelRenderer.render(scene, camera);
+        requestAnimationFrame(mainLoop);
       }
-      animate();
 
       window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
         labelRenderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      window.addEventListener("keydown", (e) => {
+        const scrollHeight = scrollContainer.offsetHeight - window.innerHeight;
+        const step = scrollHeight * 0.05;
+        let scrollY = window.scrollY;
+        if (e.key === "ArrowDown") {
+          scrollY = Math.min(scrollY + step, scrollHeight);
+          window.scrollTo(0, scrollY);
+        }
+        if (e.key === "ArrowUp") {
+          scrollY = Math.max(scrollY - step, 0);
+          window.scrollTo(0, scrollY);
+        }
       });
     </script>
   </body>
