@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Scroll Controlled Video + Three.js Solar System (Merged)</title>
     <style>
+      @font-face {
+        font-family: "NeueHaasDisplay";
+        src: url("neue-haas-grotesk-display-pro-cufonfonts/NeueHaasDisplayBlackItalic.ttf")
+          format("truetype");
+        font-weight: bold;
+        font-style: normal;
+      }
       :root {
         --bg: #000;
       }
@@ -15,7 +22,7 @@
         background: var(--bg);
         height: 100%;
         overflow: auto;
-        font-family: Arial, sans-serif;
+        font-family: "NeueHaasDisplay", Arial, sans-serif;
         -webkit-font-smoothing: antialiased;
       }
       #scrollContainer {
@@ -35,10 +42,30 @@
         flex-direction: column;
         z-index: 10000;
         background: black;
+        transition: opacity 0.5s ease;
+      }
+      #loaderCanvas {
+        width: 300px !important;
+        height: 300px !important;
+      }
+      #loading-bar-container {
+        width: 200px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        margin-top: 20px;
+        overflow: hidden;
+      }
+      #loading-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #ffaa00, #ffd700);
+        border-radius: 4px;
+        transition: width 0.3s ease;
       }
       #loading-text {
         color: white;
-        font-family: "Poppins", sans-serif;
+        font-family: "NeueHaasDisplay", sans-serif;
         font-size: clamp(16px, 1.5vw, 22px);
         margin-top: 20px;
       }
@@ -48,8 +75,9 @@
         left: 50%;
         transform: translateX(-50%);
         color: white;
+        font-family: "NeueHaasDisplay", sans-serif;
         font-size: clamp(12px, 6vw, 120px);
-        font-weight: 700;
+        font-weight: bold;
         z-index: 9000;
         pointer-events: none;
         white-space: nowrap;
@@ -57,16 +85,18 @@
       }
       #solarText {
         position: fixed;
-        top: 10%;
+        top: 40%;
         left: 50%;
         transform: translateX(-50%);
         color: white;
+        font-family: "NeueHaasDisplay", sans-serif;
         font-size: clamp(12px, 4vw, 80px);
-        font-weight: 600;
+        font-weight: bold;
         z-index: 9000;
         pointer-events: none;
         white-space: nowrap;
-        opacity: 1; /* Ensure initial opacity is 1 */
+        opacity: 0;
+        visibility: hidden;
       }
       #videoSection {
         position: fixed;
@@ -77,7 +107,7 @@
         justify-content: center;
         background: black;
         pointer-events: none;
-        visibility: hidden;
+        visibility: visible;
       }
       #astronautVideo {
         width: 100vw;
@@ -85,8 +115,8 @@
         object-fit: cover;
         display: block;
         opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.6s linear, visibility 0s linear 0.6s;
+        visibility: visible;
+        transition: opacity 0.6s linear;
       }
       canvas,
       .three-canvas {
@@ -98,10 +128,11 @@
         width: 100% !important;
         height: 100% !important;
         opacity: 0;
-        transition: opacity 0.6s linear;
+        transition: opacity 0.3s linear;
       }
       .planet-label {
         color: white;
+        font-family: "NeueHaasDisplay", sans-serif;
         font-size: clamp(10px, 1.2vw, 16px);
         font-weight: bold;
         pointer-events: none;
@@ -119,7 +150,7 @@
           height: 1200vh;
         }
         #solarText {
-          font-size: clamp(10px, 3.5vw, 60px); /* Smaller font for mobile */
+          font-size: clamp(10px, 3.5vw, 60px);
         }
       }
     </style>
@@ -127,7 +158,9 @@
   <body>
     <div id="loader">
       <canvas id="loaderCanvas" width="200" height="200"></canvas>
-      <div id="loading-text">Loading 0%</div>
+      <div id="loading-bar-container">
+        <div id="loading-bar"></div>
+      </div>
     </div>
     <div id="topText"></div>
     <div id="solarText"></div>
@@ -151,30 +184,22 @@
       const loaderDiv = document.getElementById("loader");
       const loaderCanvas = document.getElementById("loaderCanvas");
       const loaderCtx = loaderCanvas.getContext("2d");
-      const loadingText = document.getElementById("loading-text");
-      const astronautVideo = document.getElementById("astronautVideo");
-      const videoSection = document.getElementById("videoSection");
-      const topText = document.getElementById("topText");
-      const solarText = document.getElementById("solarText");
-      const scrollContainer = document.getElementById("scrollContainer");
+      const loadingBar = document.getElementById("loading-bar");
 
-      /* ---------- Loader animation (mini-planets) ---------- */
-      const loaderSunRadius = 20;
-      const miniPlanets = [];
-      for (let i = 0; i < 5; i++) {
-        miniPlanets.push({
-          radius: Math.random() * 40 + 20,
-          size: Math.random() * 3 + 2,
-          speed: Math.random() * 0.03 + 0.01,
-          angle: Math.random() * Math.PI * 2,
-          color: `hsl(${Math.random() * 360},80%,60%)`,
-        });
-      }
+      const loaderSunRadius = 30;
+      const loaderPlanets = [
+        { radius: 50, size: 5, speed: 0.05, color: "#ff6666" },
+        { radius: 80, size: 7, speed: 0.04, color: "#ffcc66" },
+        { radius: 110, size: 6, speed: 0.03, color: "#66ccff" },
+        { radius: 140, size: 4, speed: 0.02, color: "#ff3333" },
+      ];
+
       function drawLoader() {
         loaderCtx.clearRect(0, 0, loaderCanvas.width, loaderCanvas.height);
         loaderCtx.save();
         loaderCtx.translate(loaderCanvas.width / 2, loaderCanvas.height / 2);
-        const grad = loaderCtx.createRadialGradient(
+
+        const sunGrad = loaderCtx.createRadialGradient(
           0,
           0,
           0,
@@ -182,47 +207,46 @@
           0,
           loaderSunRadius
         );
-        grad.addColorStop(0, "#ffff33");
-        grad.addColorStop(1, "rgba(255,255,0,0)");
+        sunGrad.addColorStop(0, "#ffff33");
+        sunGrad.addColorStop(0.7, "#ffaa00");
+        sunGrad.addColorStop(1, "rgba(255, 165, 0, 0)");
         loaderCtx.beginPath();
         loaderCtx.arc(0, 0, loaderSunRadius, 0, Math.PI * 2);
-        loaderCtx.fillStyle = grad;
+        loaderCtx.fillStyle = sunGrad;
         loaderCtx.fill();
-        miniPlanets.forEach((p) => {
-          p.angle += p.speed;
+
+        loaderPlanets.forEach((p) => {
+          loaderCtx.beginPath();
+          loaderCtx.arc(0, 0, p.radius, 0, Math.PI * 2);
+          loaderCtx.lineWidth = 1;
+          loaderCtx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+          loaderCtx.stroke();
+        });
+
+        loaderPlanets.forEach((p) => {
+          p.angle = (p.angle || Math.random() * Math.PI * 2) + p.speed;
           const x = Math.cos(p.angle) * p.radius;
           const y = Math.sin(p.angle) * p.radius;
-          const planetGrad = loaderCtx.createRadialGradient(
-            x,
-            y,
-            0,
-            x,
-            y,
-            p.size
-          );
-          planetGrad.addColorStop(0, "white");
-          planetGrad.addColorStop(0.3, p.color);
-          planetGrad.addColorStop(1, "rgba(0,0,0,0)");
           loaderCtx.beginPath();
-          loaderCtx.arc(x, y, p.size + 2, 0, Math.PI * 2);
-          loaderCtx.fillStyle = planetGrad;
+          loaderCtx.arc(x, y, p.size, 0, Math.PI * 2);
+          loaderCtx.fillStyle = p.color;
           loaderCtx.fill();
         });
+
         loaderCtx.restore();
         requestAnimationFrame(drawLoader);
       }
       drawLoader();
 
-      /* ---------- Real asset loading progress ---------- */
       let loadedAssets = 0;
-      const totalAssets = 1 + 9; // video + 9 planet models
+      const totalAssets = 1 + 9;
       function updateProgress() {
         const loadingProgress = Math.floor((loadedAssets / totalAssets) * 100);
-        loadingText.textContent = `Loading ${loadingProgress}%`;
+        loadingBar.style.width = `${loadingProgress}%`;
         if (loadedAssets === totalAssets) {
           gsap.to(loaderDiv, {
             opacity: 0,
-            duration: 0.8,
+            duration: 0.5,
             onComplete: () => {
               loaderDiv.style.display = "none";
               window.scrollTo(0, 0);
@@ -230,18 +254,14 @@
               astronautVideo.style.visibility = "visible";
               astronautVideo.style.opacity = 1;
               videoSection.style.visibility = "visible";
+              videoSection.style.display = "flex";
               document.body.style.overflowY = "auto";
+              renderer.domElement.style.visibility = "visible";
+              renderer.domElement.style.opacity = 0;
+              labelRenderer.domElement.style.visibility = "visible";
               showTextAnimation();
               initSolarText();
-              if (astronautVideo.readyState >= 4) {
-                initScrollControl();
-              } else {
-                astronautVideo.addEventListener(
-                  "canplaythrough",
-                  initScrollControl,
-                  { once: true }
-                );
-              }
+              initScrollControl();
             },
           });
         }
@@ -251,7 +271,6 @@
         updateProgress();
       });
 
-      /* ---------- Text animation for topText ---------- */
       function showTextAnimation() {
         const text = "Hey, we are Fynix";
         topText.innerHTML = "";
@@ -298,22 +317,21 @@
         });
       }
 
-      /* ---------- Initialize solarText spans without animation ---------- */
       function initSolarText() {
         const text = "A Creative space Designed by Designers for Designers";
         solarText.innerHTML = "";
         text.split("").forEach((char) => {
           const span = document.createElement("span");
           span.textContent = char === " " ? "\u00A0" : char;
-          span.style.opacity = 0;
-          span.style.transform = "translateY(30px)";
+          span.style.opacity = 1;
+          span.style.transform = "translateY(0)";
           span.style.display = "inline-block";
-          span.style.transition = "opacity 0.3s ease, transform 0.3s ease"; // Smooth transitions
+          span.style.transition = "opacity 0.3s ease, transform 0.3s ease";
           solarText.appendChild(span);
         });
+        solarText.style.visibility = "visible";
       }
 
-      /* ---------- THREE.JS: Scene & Renderer ---------- */
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         75,
@@ -341,7 +359,7 @@
       labelRenderer.domElement.style.pointerEvents = "none";
       labelRenderer.domElement.style.zIndex = "9999";
       labelRenderer.domElement.style.opacity = 0;
-      labelRenderer.domElement.style.visibility = "hidden";
+      labelRenderer.domElement.style.visibility = "visible";
       document.body.appendChild(labelRenderer.domElement);
 
       const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -496,30 +514,6 @@
       ];
       const planetMeshes = [];
       const orbitMeshes = [];
-      const spriteTexture = new THREE.TextureLoader().load(
-        "https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/lensflare/lensflare0.png"
-      );
-
-      function addGlowSpriteToMesh(
-        mesh,
-        size,
-        color = 0xffe066,
-        opacity = 0.15
-      ) {
-        const spriteMat = new THREE.SpriteMaterial({
-          map: spriteTexture,
-          color,
-          transparent: true,
-          opacity,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(size, size, 1);
-        mesh.add(sprite);
-        sprite.position.set(0, 0, -size * 0.02);
-        return sprite;
-      }
 
       function loadPlanetModel(planet) {
         gltfLoader.load(`textures/models/${planet.file}`, (gltf) => {
@@ -533,43 +527,24 @@
           let scaleFactor = planet.radius / Math.max(size.x, size.y, size.z);
           if (planet.name === "Sun") scaleFactor *= 0.8;
           mesh.scale.setScalar(scaleFactor);
-          if (planet.name === "Sun") {
-            const coreLight = new THREE.PointLight(0xffd966, 1.2, 1500);
-            mesh.add(coreLight);
-            const redGlow = new THREE.PointLight(0xff3300, 0.2, 2500);
-            mesh.add(redGlow);
-            const yellowGlow = new THREE.PointLight(0xffee88, 0.5, 1500);
-            mesh.add(yellowGlow);
-            mesh.traverse((child) => {
-              if (child.isMesh && child.material) {
-                try {
-                  child.material.emissive = new THREE.Color(0xffb84d);
-                  child.material.emissiveIntensity = 0.3;
-                } catch (e) {}
-              }
-            });
-            addGlowSpriteToMesh(mesh, 100, 0xffe066, 0.12);
-          } else {
-            addGlowSpriteToMesh(mesh, planet.radius * 10 + 40, 0xffffff, 0.08);
-          }
           const pivot = new THREE.Object3D();
           pivot.rotation.y = Math.random() * Math.PI * 2;
           pivot.userData.speed = planet.speed;
+          pivot.userData.isPlanet = true;
           mesh.position.set(planet.distance, 0, 0);
           pivot.add(mesh);
           solarSystem.add(pivot);
-          let label = null;
-          if (planet.name !== "Mars") {
-            const div = document.createElement("div");
-            div.className = "planet-label";
-            div.textContent = `${planet.name}: ${planet.info}`;
-            label = new THREE.CSS2DObject(div);
-            label.position.set(0, planet.radius + 5, 0);
-            label.visible = false;
-            mesh.add(label);
-          }
+
+          const div = document.createElement("div");
+          div.className = "planet-label";
+          div.textContent = `${planet.name}: ${planet.info}`;
+          const label = new THREE.CSS2DObject(div);
+          label.position.set(0, planet.radius + 15, 0);
+          label.visible = false;
+          mesh.add(label);
           mesh.userData.label = label;
           mesh.userData.isPlanet = true;
+
           if (planet.distance > 0) {
             const ringWidth = Math.max(0.06, planet.radius * 0.02 + 0.02);
             const orbit = new THREE.RingGeometry(
@@ -619,18 +594,21 @@
         if (lastHoveredPlanet && lastHoveredPlanet.userData.label) {
           lastHoveredPlanet.userData.label.visible = false;
         }
+
         lastHoveredPlanet = null;
         if (intersects.length > 0) {
-          let planet = intersects[0].object;
-          while (planet && !planet.userData.isPlanet) planet = planet.parent;
-          if (planet && planet.userData.label) {
-            planet.userData.label.visible = true;
-            lastHoveredPlanet = planet;
+          let planetObj = intersects[0].object;
+          while (planetObj && !planetObj.userData.isPlanet) {
+            planetObj = planetObj.parent;
+          }
+
+          if (planetObj && planetObj.userData.label) {
+            planetObj.userData.label.visible = true;
+            lastHoveredPlanet = planetObj;
           }
         }
       });
 
-      /* ---------- Scroll / Phase control logic ---------- */
       let targetProgress = 0;
       let currentProgress = 0;
       let smoothTime = 0.05;
@@ -656,7 +634,7 @@
         astronautVideo.addEventListener("ended", () => {
           gsap.to(astronautVideo, {
             opacity: 0,
-            duration: 2,
+            duration: 0.3,
             onComplete: () => {
               astronautVideo.style.visibility = "hidden";
               videoSection.style.display = "none";
@@ -676,7 +654,6 @@
         );
         const videoOpacity = 1 - Math.min(1, videoProgress * 1.2);
 
-        // Update video time
         if (
           videoDuration &&
           astronautVideo.readyState >= 2 &&
@@ -691,7 +668,6 @@
           }
         }
 
-        // Top text animations
         let fadeStart = 0.05,
           fadeEnd = 0.25;
         let fadeProgress = (videoProgress - fadeStart) / (fadeEnd - fadeStart);
@@ -714,9 +690,8 @@
         topText.style.opacity = textOpacity;
         topText.style.fontSize = `${fontSize}vw`;
 
-        // Video visibility
         astronautVideo.style.opacity = videoOpacity;
-        if (textOpacity > 0) {
+        if (videoOpacity > 0) {
           astronautVideo.style.visibility = "visible";
           videoSection.style.display = "flex";
           videoSection.style.visibility = "visible";
@@ -726,20 +701,16 @@
           videoSection.style.visibility = "hidden";
         }
 
-        // Three.js scene and solar text
         const sceneProgress = Math.min(
           Math.max((currentProgress - phaseSplit) / (1 - phaseSplit), 0),
           1
         );
-        console.log("sceneProgress:", sceneProgress); // Debug scroll progress
-        const sceneOpacity = Math.min(1, sceneProgress * 1.05);
+        const sceneOpacity = sceneProgress > 0 ? 1 : 0;
         renderer.domElement.style.opacity = sceneOpacity;
-        labelRenderer.domElement.style.opacity = Math.min(1, sceneProgress);
+        labelRenderer.domElement.style.opacity = sceneProgress > 0 ? 1 : 0;
 
-        // Solar text letter-by-letter animation
         const allSpans = solarText.querySelectorAll("span");
-        console.log("solarText spans:", allSpans.length); // Debug span count
-        const letterProgress = sceneProgress * allSpans.length * 1.5; // Speed up letter reveal
+        const letterProgress = sceneProgress * allSpans.length * 1.5;
         allSpans.forEach((span, index) => {
           const letterThreshold = index / allSpans.length;
           const letterFadeProgress = Math.min(
@@ -752,7 +723,6 @@
           }px)`;
         });
 
-        // Solar text visibility and scaling
         const solarScale = 1 - sceneProgress * 0.3;
         const initialSolarFontSize = 6;
         const minSolarFontSize = 1;
@@ -762,8 +732,7 @@
         solarText.style.transform = `translateX(-50%) scale(${solarScale})`;
         solarText.style.fontSize = `${solarFontSize}vw`;
         solarText.style.visibility = sceneProgress > 0 ? "visible" : "hidden";
-        console.log("solarText visibility:", solarText.style.visibility); // Debug visibility
-        // --- Fade out solar text when scene fully reached ---
+
         if (sceneProgress > 0.85) {
           gsap.to(solarText, {
             opacity: 0,
