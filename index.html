@@ -614,6 +614,8 @@
       let smoothTime = 0.05;
       let lastScroll = 0;
       let videoDuration = 0;
+      let lastVideoTime = 0;
+
       astronautVideo.addEventListener("loadedmetadata", () => {
         videoDuration = astronautVideo.duration || 0;
       });
@@ -659,13 +661,19 @@
           astronautVideo.readyState >= 2 &&
           videoOpacity > 0
         ) {
-          const desiredTime = Math.max(
-            0,
-            Math.min(videoDuration * videoProgress, videoDuration - 0.01)
-          );
-          if (Math.abs(astronautVideo.currentTime - desiredTime) > 0.05) {
-            astronautVideo.currentTime = desiredTime;
+          const desiredTime = videoDuration * videoProgress;
+
+          // Smooth easing (lerp)
+          astronautVideo.currentTime +=
+            (desiredTime - astronautVideo.currentTime) * 0.15;
+
+          // ✅ Scroll-based play/pause optimization
+          if (Math.abs(astronautVideo.currentTime - lastVideoTime) < 0.02) {
+            astronautVideo.pause();
+          } else {
+            astronautVideo.play();
           }
+          lastVideoTime = astronautVideo.currentTime;
         }
 
         let fadeStart = 0.05,
