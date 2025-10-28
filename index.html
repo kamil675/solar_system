@@ -78,7 +78,7 @@
         font-family: "NeueHaasDisplay", sans-serif;
         font-size: clamp(12px, 6vw, 120px);
         font-weight: bold;
-        z-index: 9000;
+        z-index: 9500;
         pointer-events: none;
         white-space: nowrap;
         opacity: 0;
@@ -98,6 +98,7 @@
         opacity: 0;
         visibility: hidden;
       }
+
       #videoSection {
         position: fixed;
         inset: 0;
@@ -109,6 +110,7 @@
         pointer-events: none;
         visibility: visible;
       }
+
       #astronautVideo {
         width: 100vw;
         height: 100vh;
@@ -123,13 +125,14 @@
         position: fixed !important;
         top: 0;
         left: 0;
-        z-index: 7000;
+        z-index: 9000; /* pehle 7000 tha */
         pointer-events: auto;
         width: 100% !important;
         height: 100% !important;
         opacity: 0;
         transition: opacity 0.3s linear;
       }
+
       .planet-label {
         color: white;
         font-family: "NeueHaasDisplay", sans-serif;
@@ -261,6 +264,13 @@
               renderer.domElement.style.opacity = 1;
               labelRenderer.domElement.style.visibility = "visible";
               labelRenderer.domElement.style.opacity = 1;
+
+              // SHOW STARS IMMEDIATELY (fade-in)
+              gsap.to(starsRenderer.domElement, {
+                opacity: 1,
+                duration: 1.5,
+                ease: "power2.out",
+              });
 
               document.body.style.overflowY = "auto";
 
@@ -407,8 +417,11 @@
       fillLight2.position.set(-400, -200, -300);
       scene.add(fillLight2);
 
+      // -------------------------
+      // STAR GEOMETRY & MATERIAL
+      // -------------------------
       const starGeometry = new THREE.BufferGeometry();
-      const starCount = 2000;
+      const starCount = 10000;
       const starVertices = [];
       const starSpeeds = [];
       const spreadX = 2000,
@@ -416,7 +429,7 @@
         spreadZ = 2000;
       const minSpeed = 0.05,
         maxSpeed = 0.08;
-      const starSize = 2.5;
+      const starSize = 1;
       for (let i = 0; i < starCount; i++) {
         const x = (Math.random() - 0.5) * spreadX;
         const y = (Math.random() - 0.5) * spreadY;
@@ -433,18 +446,53 @@
       );
       const starMaterial = new THREE.PointsMaterial({
         color: 0xffffff,
-        size: starSize,
+        size: 2.5,
         map: starTexture,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.8,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
-      const stars = new THREE.Points(starGeometry, starMaterial);
-      scene.add(stars);
+
+      // ORIGINAL: points in main scene (commented out to avoid duplication)
+      // const stars = new THREE.Points(starGeometry, starMaterial);
+      // scene.add(stars);
+
+      // -------------------------
+      // DEDICATED STARS SCENE + RENDERER
+      // -------------------------
+      const starsScene = new THREE.Scene();
+      const starsCamera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        10000
+      );
+      starsCamera.position.z = 400;
+
+      const starsRenderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+      });
+      starsRenderer.setSize(window.innerWidth, window.innerHeight);
+      starsRenderer.setClearColor(0x000000, 0); // transparent background
+      starsRenderer.domElement.style.position = "fixed";
+      starsRenderer.domElement.style.top = "0";
+      starsRenderer.domElement.style.left = "0";
+      // Make stars appear above most elements. Loader will hide first; then we fade stars in.
+      starsRenderer.domElement.style.zIndex = "10001";
+      starsRenderer.domElement.style.pointerEvents = "none";
+      starsRenderer.domElement.style.opacity = "0"; // hidden until loader finishes
+      starsRenderer.domElement.classList.add("three-canvas");
+      document.body.appendChild(starsRenderer.domElement);
+
+      // Reuse same geometry & material so positions update once
+      const starsBg = new THREE.Points(starGeometry, starMaterial);
+      starsScene.add(starsBg);
 
       function animateStars(factor = 1) {
-        const positions = stars.geometry.attributes.position.array;
+        // update positions (single source of truth: starGeometry)
+        const positions = starGeometry.attributes.position.array;
         for (let i = 0; i < positions.length; i += 3) {
           positions[i + 1] += starSpeeds[i / 3] * factor;
           if (positions[i + 1] > spreadY / 2) {
@@ -453,7 +501,8 @@
             positions[i + 2] = (Math.random() - 0.5) * spreadZ;
           }
         }
-        stars.geometry.attributes.position.needsUpdate = true;
+        starGeometry.attributes.position.needsUpdate = true;
+        // both scenes use same geometry, so no need to update separately
       }
 
       const gltfLoader = new THREE.GLTFLoader();
@@ -811,7 +860,14 @@
         }
 
         updateMeshMap();
-        animateStars(2);
+
+        // === ALWAYS render stars background (only after assets loaded) ===
+        if (loadedAssets === totalAssets) {
+          // slightly faster star movement for background feel
+          animateStars(1.5);
+          starsRenderer.render(starsScene, starsCamera);
+        }
+
         controls.update();
         renderer.render(scene, camera);
         labelRenderer.render(scene, camera);
@@ -823,6 +879,11 @@
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
         labelRenderer.setSize(window.innerWidth, window.innerHeight);
+
+        // update stars renderer & camera
+        starsCamera.aspect = window.innerWidth / window.innerHeight;
+        starsCamera.updateProjectionMatrix();
+        starsRenderer.setSize(window.innerWidth, window.innerHeight);
       });
 
       window.addEventListener("keydown", (e) => {
