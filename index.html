@@ -250,15 +250,20 @@
             onComplete: () => {
               loaderDiv.style.display = "none";
               window.scrollTo(0, 0);
+
               astronautVideo.currentTime = 0;
               astronautVideo.style.visibility = "visible";
               astronautVideo.style.opacity = 1;
               videoSection.style.visibility = "visible";
               videoSection.style.display = "flex";
-              document.body.style.overflowY = "auto";
+
               renderer.domElement.style.visibility = "visible";
-              renderer.domElement.style.opacity = 0;
+              renderer.domElement.style.opacity = 1;
               labelRenderer.domElement.style.visibility = "visible";
+              labelRenderer.domElement.style.opacity = 1;
+
+              document.body.style.overflowY = "auto";
+
               showTextAnimation();
               initSolarText();
               initScrollControl();
