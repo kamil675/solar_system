@@ -323,17 +323,43 @@
       }
 
       function initSolarText() {
-        const text = "A Creative space Designed by Designers for Designers";
-        solarText.innerHTML = "";
-        text.split("").forEach((char) => {
-          const span = document.createElement("span");
-          span.textContent = char === " " ? "\u00A0" : char;
-          span.style.opacity = 1;
-          span.style.transform = "translateY(0)";
-          span.style.display = "inline-block";
-          span.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-          solarText.appendChild(span);
+        const lines = [
+          "A Creative space",
+          "Designed by Designers for Designers",
+        ];
+
+        solarText.innerHTML = ""; // clear previous
+
+        lines.forEach((line, lineIndex) => {
+          const lineDiv = document.createElement("div");
+          lineDiv.style.display = "block";
+          lineDiv.style.textAlign = "center";
+          lineDiv.style.marginBottom = lineIndex === 0 ? "0.1em" : "0";
+
+          // 👇 Enhanced first line look
+          if (lineIndex === 0) {
+            lineDiv.style.fontSize = "2em";
+            lineDiv.style.fontWeight = "900";
+            lineDiv.style.letterSpacing = "0.04em";
+          } else {
+            lineDiv.style.fontSize = "1.2em";
+            lineDiv.style.fontWeight = "400";
+            lineDiv.style.letterSpacing = "0.02em";
+          }
+
+          line.split("").forEach((char) => {
+            const span = document.createElement("span");
+            span.textContent = char === " " ? "\u00A0" : char;
+            span.style.opacity = 1;
+            span.style.transform = "translateY(0)";
+            span.style.display = "inline-block";
+            span.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+            lineDiv.appendChild(span);
+          });
+
+          solarText.appendChild(lineDiv);
         });
+
         solarText.style.visibility = "visible";
       }
 
@@ -654,7 +680,7 @@
 
       function mainLoop() {
         currentProgress += (targetProgress - currentProgress) * smoothTime;
-        const phaseSplit = 0.7;
+        const phaseSplit = 0.5;
         const videoProgress = Math.min(
           Math.max(currentProgress / phaseSplit, 0),
           1
@@ -775,8 +801,8 @@
           const baseScale = 0.15 + (0.8 - 0.15) * sceneProgress;
           solarSystem.scale.setScalar(baseScale * scaleFactor);
           solarSystem.position.y =
-            -window.innerHeight * 0.6 +
-            window.innerHeight * 0.6 * sceneProgress;
+            -window.innerHeight * 2.5 +
+            window.innerHeight * 2.5 * sceneProgress;
           camera.position.z = (350 - 150 * sceneProgress) * scaleFactor;
           camera.lookAt(0, 0, 0);
           controls.enableRotate = sceneProgress > 0.15;
