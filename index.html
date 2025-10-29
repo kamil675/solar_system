@@ -753,19 +753,32 @@
       // === PRO: requestVideoFrameCallback for MOBILE SMOOTHNESS ===
       let videoScrubbing = false;
 
-      let isSeeking = false;
       function scrubVideo() {
-        if (!videoDuration || astronautVideo.readyState < 2) return;
+        if (
+          !videoDuration ||
+          astronautVideo.readyState < 2 ||
+          videoOpacity <= 0.1
+        ) {
+          videoScrubbing = false;
+          return;
+        }
 
         const targetTime = videoDuration * videoProgress;
-        const diff = Math.abs(targetTime - astronautVideo.currentTime);
+        const diff = targetTime - astronautVideo.currentTime;
+        astronautVideo.currentTime += diff * 0.3;
 
-        if (diff > 0.1 && !isSeeking) {
-          isSeeking = true;
-          astronautVideo.currentTime = targetTime;
-          setTimeout(() => {
-            isSeeking = false;
-          }, 100);
+        if (Math.abs(diff) > 0.05) {
+          if (astronautVideo.paused) {
+            astronautVideo.play().catch(() => {});
+          }
+        } else {
+          if (!astronautVideo.paused) {
+            astronautVideo.pause();
+          }
+        }
+
+        if (videoScrubbing) {
+          astronautVideo.requestVideoFrameCallback(scrubVideo);
         }
       }
       astronautVideo.addEventListener("loadedmetadata", () => {
@@ -775,20 +788,20 @@
 
       function initScrollControl() {
         let scrollTimeout;
-        let lastScrollY = 0;
         window.addEventListener("scroll", () => {
-          lastScrollY = window.scrollY;
-          if (!requestId) requestId = requestAnimationFrame(updateScroll);
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(
+            () => {
+              const scrollY = window.scrollY;
+              const scrollHeight =
+                scrollContainer.offsetHeight - window.innerHeight;
+              const mobileFactor = window.innerWidth < 768 ? 0.3 : 1;
+              targetProgress =
+                Math.min(scrollY / scrollHeight, 1) * mobileFactor;
+            },
+            window.innerWidth < 768 ? 16 : 8
+          );
         });
-
-        let requestId = null;
-        function updateScroll() {
-          const scrollHeight =
-            scrollContainer.offsetHeight - window.innerHeight;
-          const rawProgress = lastScrollY / scrollHeight;
-          targetProgress = Math.min(rawProgress, 1);
-          requestId = null;
-        }
 
         astronautVideo.addEventListener("ended", () => {
           gsap.to(astronautVideo, {
@@ -989,10 +1002,8 @@
       }
       // DYNAMIC SCROLL HEIGHT
       function updateScrollHeight() {
-        const baseHeight = 400; // vh equivalent
         const factor = window.innerWidth < 768 ? 12 : 8;
-        const targetVH = baseHeight * mobileFactor;
-        scrollContainer.style.height = `calc(${targetVH}vh - ${window.innerHeight}px)`;
+        scrollContainer.style.height = `${window.innerHeight * factor}px`;
       }
       updateScrollHeight();
       window.addEventListener("resize", updateScrollHeight);
