@@ -148,10 +148,7 @@
       html::-webkit-scrollbar {
         display: none;
       }
-      @media (max-width: 768px) {
-        #scrollContainer {
-          height: 1200vh;
-        }
+
         #solarText {
           font-size: clamp(10px, 3.5vw, 60px);
         }
@@ -174,7 +171,9 @@
         type="video/mp4"
         muted
         playsinline
+        webkit-playsinline
         preload="auto"
+        crossorigin="anonymous"
       ></video>
     </div>
     <div id="scrollContainer"></div>
@@ -691,8 +690,8 @@
 
       let targetProgress = 0;
       let currentProgress = 0;
-      let smoothTime = 0.05;
-      let lastScroll = 0;
+      let smoothTime = 0.08; // Base
+      let lastTarget = 0; // NEW: Track direction
       let videoDuration = 0;
       let lastVideoTime = 0;
 
@@ -702,15 +701,15 @@
       astronautVideo.pause();
 
       function initScrollControl() {
+        let scrollTimeout;
         window.addEventListener("scroll", () => {
-          const now = performance.now();
-          if (now - lastScroll > 10) {
+          clearTimeout(scrollTimeout);
+          scrollTimeout = setTimeout(() => {
             const scrollY = window.scrollY;
             const scrollHeight =
               scrollContainer.offsetHeight - window.innerHeight;
             targetProgress = Math.min(scrollY / scrollHeight, 1);
-            lastScroll = now;
-          }
+          }, 8);
         });
 
         astronautVideo.addEventListener("ended", () => {
@@ -729,6 +728,11 @@
 
       function mainLoop() {
         currentProgress += (targetProgress - currentProgress) * smoothTime;
+
+        // DIRECTION-BASED SMOOTHING (Backward = Slower)
+        const direction = targetProgress > lastTarget ? 1 : -1;
+        smoothTime = 0.08;
+        lastTarget = targetProgress;
         const phaseSplit = 0.5;
         const videoProgress = Math.min(
           Math.max(currentProgress / phaseSplit, 0),
@@ -736,22 +740,26 @@
         );
         const videoOpacity = 1 - Math.min(1, videoProgress * 1.2);
 
+        // SMOOTH VIDEO SCRUBBING (NO JANK)
         if (
           videoDuration &&
           astronautVideo.readyState >= 2 &&
           videoOpacity > 0
         ) {
           const desiredTime = videoDuration * videoProgress;
+          const maxStep = direction < 0 ? 0.06 : 0.08; // Thoda gentle backward
 
-          // Smooth easing (lerp)
-          astronautVideo.currentTime +=
-            (desiredTime - astronautVideo.currentTime) * 0.15;
+          const diff = desiredTime - astronautVideo.currentTime;
 
-          // ✅ Scroll-based play/pause optimization
-          if (Math.abs(astronautVideo.currentTime - lastVideoTime) < 0.02) {
+          astronautVideo.currentTime += diff * 0.15; // smooth lerp both ways
+
+          // Smart play/pause
+          const timeMoving =
+            Math.abs(astronautVideo.currentTime - lastVideoTime) > 0.03;
+          if (timeMoving && astronautVideo.paused) {
+            astronautVideo.play().catch(() => {});
+          } else if (!timeMoving && !astronautVideo.paused) {
             astronautVideo.pause();
-          } else {
-            astronautVideo.play();
           }
           lastVideoTime = astronautVideo.currentTime;
         }
@@ -862,9 +870,8 @@
         updateMeshMap();
 
         // === ALWAYS render stars background (only after assets loaded) ===
-        if (loadedAssets === totalAssets) {
-          // slightly faster star movement for background feel
-          animateStars(1.5);
+        if (starsScene && starsRenderer && starsCamera) {
+          animateStars(0.2);
           starsRenderer.render(starsScene, starsCamera);
         }
 
@@ -873,7 +880,13 @@
         labelRenderer.render(scene, camera);
         requestAnimationFrame(mainLoop);
       }
-
+      // DYNAMIC SCROLL HEIGHT
+      function updateScrollHeight() {
+        const factor = window.innerWidth < 768 ? 12 : 8;
+        scrollContainer.style.height = `${window.innerHeight * factor}px`;
+      }
+      updateScrollHeight();
+      window.addEventListener("resize", updateScrollHeight);
       window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
