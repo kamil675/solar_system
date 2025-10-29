@@ -74,89 +74,102 @@
         top: 40%;
         left: 50%;
         transform: translateX(-50%);
-        color: white;
-        font-family: "NeueHaasDisplay", sans-serif;
+        font-family: "NeueHaasDisplay", Arial, sans-serif;
         font-size: clamp(12px, 6vw, 120px);
-        font-weight: bold;
+        font-weight: 600; /* Reduced from bold (700+) */
         z-index: 9500;
-        /* pointer-events: none; */
         white-space: nowrap;
-        transition: transform 0.1s ease-out;
         cursor: default;
         opacity: 0;
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        text-align: center;
+        line-height: 1;
+
+        /* === 3D TEXT EFFECT === */
+        color: #ffffff;
+        text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb,
+          0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, 0.1),
+          0 0 5px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.3),
+          0 3px 5px rgba(0, 0, 0, 0.2), 0 5px 10px rgba(0, 0, 0, 0.25),
+          0 10px 10px rgba(0, 0, 0, 0.2), 0 20px 20px rgba(0, 0, 0, 0.15);
+
+        /* Optional: Gradient for depth */
+        background: linear-gradient(to bottom, #ffffff, #e0e0e0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
-        #topText.hovered {
-          transition: none;
-        }
-        #solarText {
-          position: fixed;
-          top: 40%;
-          left: 50%;
-          transform: translateX(-50%);
-          color: white;
-          font-family: "NeueHaasDisplay", sans-serif;
-          font-size: clamp(12px, 4vw, 80px);
-          font-weight: bold;
-          z-index: 9000;
-          pointer-events: none;
-          white-space: nowrap;
-          opacity: 0;
-          visibility: hidden;
-        }
+      #topText.hovered {
+        transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 100%);
+      }
+      #solarText {
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        font-family: "NeueHaasDisplay", sans-serif;
+        font-size: clamp(12px, 4vw, 80px);
+        font-weight: bold;
+        z-index: 9000;
+        pointer-events: none;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+      }
 
-        #videoSection {
-          position: fixed;
-          inset: 0;
-          z-index: 8000;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: black;
-          pointer-events: none;
-          visibility: visible;
-        }
+      #videoSection {
+        position: fixed;
+        inset: 0;
+        z-index: 8000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: black;
+        pointer-events: none;
+        visibility: visible;
+      }
 
-        #astronautVideo {
-          width: 100vw;
-          height: 100vh;
-          object-fit: cover;
-          display: block;
-          opacity: 0;
-          visibility: visible;
-          transition: opacity 0.6s linear;
-        }
-        canvas,
-        .three-canvas {
-          position: fixed !important;
-          top: 0;
-          left: 0;
-          z-index: 9000; /* pehle 7000 tha */
-          pointer-events: auto;
-          width: 100% !important;
-          height: 100% !important;
-          opacity: 0;
-          transition: opacity 0.3s linear;
-        }
+      #astronautVideo {
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        display: block;
+        opacity: 0;
+        visibility: visible;
+        transition: opacity 0.6s linear;
+      }
+      canvas,
+      .three-canvas {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        z-index: 9000; /* pehle 7000 tha */
+        pointer-events: auto;
+        width: 100% !important;
+        height: 100% !important;
+        opacity: 0;
+        transition: opacity 0.3s linear;
+      }
 
-        .planet-label {
-          color: white;
-          font-family: "NeueHaasDisplay", sans-serif;
-          font-size: clamp(10px, 1.2vw, 16px);
-          font-weight: bold;
-          pointer-events: none;
-          text-shadow: 0 0 5px black;
-        }
-        html {
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-        }
-        html::-webkit-scrollbar {
-          display: none;
-        }
+      .planet-label {
+        color: white;
+        font-family: "NeueHaasDisplay", sans-serif;
+        font-size: clamp(10px, 1.2vw, 16px);
+        font-weight: bold;
+        pointer-events: none;
+        text-shadow: 0 0 5px black;
+      }
+      html {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      html::-webkit-scrollbar {
+        display: none;
+      }
 
-        #solarText {
-          font-size: clamp(10px, 3.5vw, 60px);
-        }
+      #solarText {
+        font-size: clamp(10px, 3.5vw, 60px);
       }
     </style>
   </head>
@@ -375,10 +388,10 @@
           const deltaX = e.clientX - centerX;
           const deltaY = e.clientY - centerY;
 
-          const moveX = deltaX * 0.03; // sensitivity
-          const moveY = deltaY * 0.03;
-          const rotateY = deltaX * 0.05;
-          const rotateX = -deltaY * 0.05;
+          const moveX = deltaX * 0.008; // sensitivity
+          const moveY = deltaY * 0.008;
+          const rotateY = deltaX * 0.0015;
+          const rotateX = -deltaY * 0.0015;
 
           topText.style.transform = `translateX(-50%) translate(${moveX}px, ${moveY}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1)`;
         });
@@ -509,13 +522,6 @@
         depthWrite: false,
       });
 
-      // ORIGINAL: points in main scene (commented out to avoid duplication)
-      // const stars = new THREE.Points(starGeometry, starMaterial);
-      // scene.add(stars);
-
-      // -------------------------
-      // DEDICATED STARS SCENE + RENDERER
-      // -------------------------
       const starsScene = new THREE.Scene();
       const starsCamera = new THREE.PerspectiveCamera(
         75,
@@ -544,21 +550,6 @@
       // Reuse same geometry & material so positions update once
       const starsBg = new THREE.Points(starGeometry, starMaterial);
       starsScene.add(starsBg);
-
-      // function animateStars(factor = 1) {
-      //   // update positions (single source of truth: starGeometry)
-      //   const positions = starGeometry.attributes.position.array;
-      //   for (let i = 0; i < positions.length; i += 3) {
-      //     positions[i + 1] += starSpeeds[i / 3] * factor;
-      //     if (positions[i + 1] > spreadY / 2) {
-      //       positions[i + 1] = -spreadY / 2;
-      //       positions[i] = (Math.random() - 0.5) * spreadX;
-      //       positions[i + 2] = (Math.random() - 0.5) * spreadZ;
-      //     }
-      //   }
-      //   starGeometry.attributes.position.needsUpdate = true;
-      //   // both scenes use same geometry, so no need to update separately
-      // }
 
       const gltfLoader = new THREE.GLTFLoader();
       const solarSystem = new THREE.Group();
