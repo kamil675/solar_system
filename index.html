@@ -73,48 +73,44 @@
         position: fixed;
         top: 40%;
         left: 50%;
-        transform: translateX(-50%) perspective(1000px);
+        transform: translateX(-50%);
         font-family: "NeueHaasDisplay", Arial, sans-serif;
-        font-size: clamp(32px, 8vw, 140px);
+        font-size: clamp(12px, 6vw, 120px);
         font-weight: 900;
         z-index: 9500;
         white-space: nowrap;
+        cursor: default;
         text-align: center;
         line-height: 1;
-        cursor: default;
-        opacity: 1;
-        transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-        user-select: none;
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        transform-style: preserve-3d;
+        perspective: 1200px;
 
-        /* === ULTRA 3D TEXT === */
-        color: #ffffff;
-        text-shadow: 
-    /* Bevel & Depth */ 0 1px 0 #ccc, 0 2px 0 #bbb,
-          0 3px 0 #aaa, 0 4px 0 #999, 0 5px 0 #888, 0 6px 0 #777, 0 7px 0 #666,
-          0 8px 0 #555, 0 9px 0 #444, 0 10px 0 #333, 0 11px 0 #222,
-          0 12px 0 #111, 0 13px 15px rgba(0, 0, 0, 0.5),
-          0 15px 25px rgba(0, 0, 0, 0.4);
-
-        /* Gradient Fill (Metallic) */
+        /* === FRONT FACE === */
+        color: #fff;
         background: linear-gradient(
-          135deg,
+          to bottom,
           #ffffff 0%,
-          #e0e0e0 15%,
-          #b0b0b0 50%,
-          #d0d0d0 85%,
-          #ffffff 100%
+          #e3e3e3 40%,
+          #bfbfbf 100%
         );
         -webkit-background-clip: text;
-        background-clip: text;
         -webkit-text-fill-color: transparent;
 
-        /* Inner Glow */
-        filter: drop-shadow(0 0 8px rgba(127, 130, 130, 0.3))
-          drop-shadow(0 0 16px rgba(101, 104, 104, 0.2));
+        /* === DEEP 3D SHADOW LAYERS (REAL DEPTH ILLUSION) === */
+        text-shadow: 1px 1px 0 #e0e0e0, 2px 2px 0 #d6d6d6, 3px 3px 0 #c4c4c4,
+          4px 4px 0 #b2b2b2, 5px 5px 0 #9f9f9f, 6px 6px 0 #8d8d8d,
+          7px 7px 0 #7a7a7a, 8px 8px 0 #666666, 9px 9px 0 #525252,
+          10px 10px 0 #3f3f3f, 11px 11px 0 #2b2b2b, 12px 12px 0 #1a1a1a,
+          13px 13px 0 #0f0f0f;
 
-        /* 3D Transform Container */
-        transform-style: preserve-3d;
+        /* === SMALL LIGHT REFLECTION === */
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+
+        /* === ANIMATED PARALLAX ROTATION ON HOVER === */
+        transform-origin: center;
       }
+
       #topText.hovered {
         transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 100%);
       }
